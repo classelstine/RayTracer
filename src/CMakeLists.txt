@@ -31,9 +31,9 @@ link_directories(
 #-------------------------------------------------------------------------------
 # Add executable
 #-------------------------------------------------------------------------------
-add_executable(as1 ${APPLICATION_SOURCE})
+add_executable(raytrace ${APPLICATION_SOURCE})
 
-target_link_libraries( as1
+target_link_libraries( raytrace
     glew ${GLEW_LIBRARIES}
     glfw ${GLFW_LIBRARIES}
     ${OPENGL_LIBRARIES}
@@ -45,7 +45,7 @@ target_link_libraries( as1
 # Platform-specific configurations for target
 #-------------------------------------------------------------------------------
 if(APPLE)
-  set_property( TARGET as1 APPEND_STRING PROPERTY COMPILE_FLAGS
+  set_property( TARGET raytrace APPEND_STRING PROPERTY COMPILE_FLAGS
                 "-Wno-deprecated-declarations -Wno-c++11-extensions")
 endif(APPLE)
 
@@ -53,4 +53,4 @@ endif(APPLE)
 set(EXECUTABLE_OUTPUT_PATH ..)
 
 # Install to project root
-install(TARGETS as1 DESTINATION ${Assignment1_SOURCE_DIR})
+install(TARGETS raytrace DESTINATION ${Assignment1_SOURCE_DIR})
