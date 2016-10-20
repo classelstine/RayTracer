@@ -16,9 +16,17 @@ void Film::write_image(void) {
     cout << "ATTEMPTING TO WRITE IMAGE" << endl;
 }
 
+void Camera::generate_ray(Sample s, Ray* r) {
+    cout << "CAMERA GENERATING RAY" << endl;
+}
+
+void Raytracer::trace(Ray r, Color *c) {
+    cout << "RAY TRACER TRACING" << endl;
+}
+
 void Scene::render(void) {
     // This is the main rendering loop
-    while(!sampler.generate_sample(&sample) {
+    while(!sampler.get_sample(&sample) {
           camera.generate_ray(sample, &ray);
           raytracer.trace(ray, &color);
           film.commit(sample, color);

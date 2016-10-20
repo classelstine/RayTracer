@@ -28,6 +28,10 @@ void Color::add_color(Color c) {
 
 // Scene will hold our Film, Camera
 class Scene {
+    Sampler sampler;
+    Camera camera;
+    Raytracer raytracer;
+    Film film;
     public:
         vector<float> eye_position;
         vector<float> UL;
@@ -104,4 +108,25 @@ class Sphere {
         float radius;
         vector<float> center;
 };
+
+class Raytracer {
+    public:
+        void trace(Ray, *Color);
+        Raytracer();
+}
+
+// Camera class, which can take a sample's coordinates and create a ray from the eye location through this point
+// in the image. 
+class Camera {
+    public:
+        Camera();
+        void generate_array(Sample cur_sample, Ray& cur_ray);
+}
+
+// Ray class represented as a point and a direction
+class Ray {
+    public:
+        float px, py, pz, dx, dy, dz;
+        Ray(float, float, float, float, float, float);
+}
 
