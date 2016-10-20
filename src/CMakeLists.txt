@@ -5,7 +5,6 @@ cmake_minimum_required(VERSION 2.8)
 
 # Application source
 set(APPLICATION_SOURCE
-    
     raytrace.cpp
 )
 
@@ -16,6 +15,7 @@ include_directories(
   ${GLEW_INCLUDE_DIRS}
   ${GLFW_INCLUDE_DIRS}
 #  ${FREETYPE_INCLUDE_DIRS}
+#  ${OpenCV_INCLUDE_DIRS} 
 )
 
 #-------------------------------------------------------------------------------
@@ -39,6 +39,7 @@ target_link_libraries( raytrace
     ${OPENGL_LIBRARIES}
 #    ${FREETYPE_LIBRARIES}
     ${CMAKE_THREADS_INIT}
+    #    Assignment2 ${OpenCV_LIBS}
 )
 
 #-------------------------------------------------------------------------------

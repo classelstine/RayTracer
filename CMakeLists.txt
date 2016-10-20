@@ -113,12 +113,19 @@ if(WIN32)
 
 endif(WIN32)
 
+#if(WIN32)
+#    set(OpenCV_DIR "d:/libs/opencv-2.4.8/build")
+#else()
+#    set(OpenCV_DIR "/usr/lib/opencv")
+#endif()
+#set("OpenCV_DIR" "/usr/local/Cellar/opencv3/HEAD-0d0a399_4/include/opencv2")
 #-------------------------------------------------------------------------------
 # Find dependencies
 #-------------------------------------------------------------------------------
 
 # Required packages
 find_package(OpenGL REQUIRED)
+#find_package(OpenCV REQUIRED)
 find_package(Threads REQUIRED)
 find_package(Freetype REQUIRED)
 
@@ -130,6 +137,7 @@ include_directories(glfw-3.2.1/include)
 add_subdirectory(glew)
 include_directories(glew/include)
 # set_property( TARGET glew APPEND_STRING PROPERTY COMPILE_FLAGS -w )
+
 
 #-------------------------------------------------------------------------------
 # Add subdirectories
