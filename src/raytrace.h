@@ -8,7 +8,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include <math.h>
-//#include <opencv2/opencv.hpp>
+#include <opencv2/opencv.hpp>
 #define PI 3.1415926535
 using namespace std;
 
