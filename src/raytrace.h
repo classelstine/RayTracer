@@ -20,6 +20,15 @@ class Ray {
         Ray(float, float, float, float, float, float);
 };
 
+Ray::Ray(void) {
+    px = 0;
+    py = 0;
+    pz = 0;
+    dx = 1;
+    dy = 1; 
+    dz = 1;
+}
+
 class Color {
     public:
         float r, g, b;
@@ -27,6 +36,18 @@ class Color {
         Color();
         void add_color(Color);
 };
+
+Color::Color(float red, float green, float blue) {
+    r = red;
+    g = green;
+    b = blue;
+}
+
+Color::Color(void) {
+    r = 0;
+    g = 0;
+    b = 0;
+}
 
 void Color::add_color(Color c) {
     r = r + c.r;
@@ -45,6 +66,11 @@ class Sample {
 Sample::Sample(float my_x, float my_y) {
     x = my_x;
     y = my_y;
+}
+
+Sample::Sample(void) {
+    x = 0;
+    y = 0;
 }
 
 class Sampler {
@@ -93,6 +119,9 @@ class Raytracer {
         Raytracer();
 };
 
+Raytracer::Raytracer(void) {
+}
+
 // Camera class, which can take a sample's coordinates and create a ray from the eye location through this point
 // in the image. 
 class Camera {
@@ -100,6 +129,10 @@ class Camera {
         Camera();
         void generate_ray(Sample cur_sample, Ray* cur_ray);
 };
+
+Camera::Camera(void) {
+}
+
 // Scene will hold our Film, Camera
 class Scene {
     Sampler sampler;
