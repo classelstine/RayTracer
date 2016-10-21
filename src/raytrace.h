@@ -75,9 +75,10 @@ class Film {
     // Each pixel is designated one bucket of Color vectors, once all samples are created, each bucket is averaged to create the color for each pixel.
     vector<vector<vector<Color>>> pixel_buckets;
        public:
-        void commit(Sample& sample, Color& color);
+        void commit(Sample sample, Color color);
         void write_image();
         Film(int, int, int);
+        Film(void);
 };
 
 class Sphere {
@@ -135,7 +136,6 @@ Scene::Scene(vector<float> eye, vector<float> ul, vector<float> ur, vector<float
 
 
 
-void Scene::initialize(void) {
-}
+
 
 

@@ -11,9 +11,9 @@ Film::Film(int x_res, int y_res, int sample_rate) {
    pixel_buckets = vector<vector<vector<Color>>> (x_res, vector<vector<Color>>(y_res, vector<Color>(sample_rate, Color(0,0,0))));
 }
 
-//Film::Film(void) {
- ////  pixel_buckets = vector<vector<vector<Color>>> (100, vector<vector<Color>>(100, vector<Color>(1, Color(0,0,0))));
-//}
+Film::Film(void) {
+    pixel_buckets = vector<vector<vector<Color>>> (100, vector<vector<Color>>(100, vector<Color>(1, Color(0,0,0))));
+}
 
 // Averages over each pixel bucks and writes the result to a screen
 void Film::write_image(void) {
@@ -66,17 +66,15 @@ bool Sampler::get_sample(Sample *sample){
     } else {
         return false;
     }
-    return true
-        
-
+    return true;
 }
 
 Scene::Scene(void) {
-    eye_position = vector<float>(0,0,-1);
-    UL = vector<float>(1,-1,0);
-    UR = vector<float>(1,1,0);
-    LL = vector<float>(-1,-1,0);
-    LR = vector<float>(-1,1,0);
+    eye_position = {0.0,0.0,-1.0};
+    UL = {1.0,-1.0,0.0};
+    UR = {1.0,1.0,0.0};
+    LL = {-1.0,-1.0,0.0};
+    LR = {-1.0,1.0,0.0};
     resolution_x = 100;
     resolution_y = 100;
     sampler = Sampler();
@@ -105,11 +103,6 @@ void Scene::render(void) {
         Sample sample = Sample();
     }
     film.write_image();
-}
-
-// Gets sample from screen coordinates. 
-bool Sampler::get_sample(Sample *sample){   
-    return true;
 }
 
 
