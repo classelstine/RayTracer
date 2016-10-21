@@ -88,7 +88,7 @@ class Sphere {
 
 class Raytracer {
     public:
-        void trace(Ray, Color&);
+        void trace(Ray, Color*);
         Raytracer();
 };
 
@@ -97,7 +97,7 @@ class Raytracer {
 class Camera {
     public:
         Camera();
-        void generate_array(Sample cur_sample, Ray& cur_ray);
+        void generate_ray(Sample cur_sample, Ray* cur_ray);
 };
 // Scene will hold our Film, Camera
 class Scene {
@@ -127,7 +127,13 @@ Scene::Scene(vector<float> eye, vector<float> ul, vector<float> ur, vector<float
     LR = lr;
     resolution_x = rx;
     resolution_y = ry;
+    sampler = Sampler();
+    camera = Camera();
+    raytracer = Raytracer();
+    film = Film(resolution_x, resolution_y, 1);
 }
+
+
 
 void Scene::initialize(void) {
 }
