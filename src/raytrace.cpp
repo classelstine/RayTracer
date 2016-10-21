@@ -1,4 +1,6 @@
 #include "raytrace.h"
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "stb_image_write.h"
 
 using namespace std;
 Scene *scn;
@@ -18,6 +20,30 @@ Film::Film(void) {
 // Averages over each pixel bucks and writes the result to a screen
 void Film::write_image(void) {
     cout << "ATTEMPTING TO WRITE IMAGE" << endl;
+    Color c1 = pixel_buckets[0][0][0];
+    Color c2 = pixel_buckets[10][10][0];
+    cout << "Manual colors: " << c1.r << c1.g << c1.b << c2.r << c2.g << c2.b << endl;
+    char const* filename = "stride8comp3";
+    // DO NOT LEAVE THIS. THIS IS A TEST. 
+    int w = 10;
+    int h = 2;
+    int stride = 2*3*w;
+    int comp = 3;
+    int cur_index;
+    uint8_t avg_pixels[w * h * 3];
+    for(int row = 0; row < h; row++) {
+        for(int col = 0; col < w; col++) {
+            cur_index = 3*row*w + 3*col;
+            avg_pixels[cur_index] = 100;
+            avg_pixels[cur_index+1] = 100;
+            avg_pixels[cur_index+2] = 0;
+        }
+    }
+
+
+
+    stbi_write_png(filename, w, h, comp, &avg_pixels, stride);
+    cout << "FILE WRITTEN" << endl;
 }
 
 // Add color c to the bucket of colors for sample s
@@ -100,7 +126,6 @@ void Scene::render(void) {
         Color color = Color();
         raytracer.trace(ray, &color);
         film.commit(sample, color);
-        Sample sample = Sample();
     }
     film.write_image();
 }
