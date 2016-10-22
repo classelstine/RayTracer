@@ -20,9 +20,6 @@ Film::Film(void) {
 // Averages over each pixel bucks and writes the result to a screen
 void Film::write_image(void) {
     cout << "ATTEMPTING TO WRITE IMAGE" << endl;
-    Color c1 = pixel_buckets[0][0][0];
-    Color c2 = pixel_buckets[10][10][0];
-    cout << "Manual colors: " << c1.r << c1.g << c1.b << c2.r << c2.g << c2.b << endl;
     char const* filename = "test_image";
     // DO NOT LEAVE THIS. THIS IS A TEST. 
     int w = 100;
@@ -34,11 +31,19 @@ void Film::write_image(void) {
     // NEEDS TO BE REPLACED WITH FINDING AVERGE FOR EACH PIXEL BUCKET
     for(int row = 0; row < h; row++) {
         for(int col = 0; col < w; col++) {
-            cur_index = 3*row*w + 3*col;
-            avg_pixels[cur_index] = 255;
-            avg_pixels[cur_index+1] = 255;
-            avg_pixels[cur_index+2] = 0;
-
+            int p_index = row*w + col;
+            cur_index = 3*p_index;
+            Color cur_color = pixel_buckets[row][col][0];
+            avg_pixels[cur_index] = cur_color.r * 255;
+            avg_pixels[cur_index+1] = cur_color.g * 255;
+            avg_pixels[cur_index+2] = cur_color.b * 255;
+            //avg_pixels[cur_index] = 0;
+            //avg_pixels[cur_index+1] = 0;
+            //avg_pixels[cur_index+2] = 0;
+            //float d = sqrt(pow((h/2) -row, 2) + pow((w/2) -col, 2));
+            //if (d < 50) {
+            //    avg_pixels[cur_index] = 100;
+            //}
         }
     }
 
@@ -48,26 +53,33 @@ void Film::write_image(void) {
 
 // Add color c to the bucket of colors for sample s
 void Film::commit(Sample s, Color c) {
-    cout << "Committing color to film" << endl;
+    //cout << "Committing color to film "<< s.x << ", " << s.y << endl;
+    int col = s.x;
+    int row = s.y;
+    // THIS IS AN IMPLEMENTATION WITH ONLY ONE SAMPLE PER BUCKET
+    // NO ANTI ALIASING
+    pixel_buckets[row][col][0] = c;
+    //cout << "Commit Sucess" << endl;
+
 }
 
 void Camera::generate_ray(Sample s, Ray* r) {
-    cout << "CAMERA GENERATING RAY" << endl;
+    //cout << "CAMERA GENERATING RAY" << endl;
 }
 
 // Currently is a dummy function which sets the color to 0.5
 void Raytracer::trace(Ray r, Color *c) {
-    cout << "RAY TRACER TRACING" << endl;
+    //cout << "RAY TRACER TRACING" << endl;
     c->r = 0.5;
-    c->g = 0.5;
+    c->g = 0;
     c->b = 0.5;
 }
 
 Sampler::Sampler(void) {
     current_px = 0;
     current_py = 0;
-    max_x = 100;
-    max_y = 100;
+    max_x = 99;
+    max_y = 99;
 }
 
 Sampler::Sampler(int x_res, int y_res) {
@@ -79,9 +91,8 @@ Sampler::Sampler(int x_res, int y_res) {
 
 
 bool Sampler::get_sample(Sample *sample){
-    // set this sample to the current sample (in screen coords)
+    // set this sample to the current sample (in screen coords) 
     sample->x = current_px;
-
     sample->y = current_py;
     // update next sample
     if (current_px < max_x) {
@@ -120,7 +131,7 @@ void Scene::initialize(void) {
 void Scene::render(void) {
     // This is the main rendering loop
     Sample sample = Sample();
-    while(!sampler.get_sample(&sample)) {
+    while(sampler.get_sample(&sample)) {
         Ray ray = Ray();
         camera.generate_ray(sample, &ray);
         Color color = Color();
