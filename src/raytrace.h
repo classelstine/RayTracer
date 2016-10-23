@@ -175,21 +175,45 @@ bool Triangle::t_hit(Ray ray, float *t) {
     return false;
 }
 
+class Light {
+    bool is_direct;
+    public:
+        valarray<float> xyz;
+        Light(valarray<float> p, bool is_d);
+        void light_vector(valarray<float> point, valarray<float> *l_vec);
+};
+
+Light::Light(valarray<float> p, bool is_d) {
+    xyz = p;
+    is_direct = is_d;
+    }
+
+void Light::light_vector(valarray<float> point, valarray<float> *l_vec) {
+    if (is_direct) {
+        *l_vec = -xyz;
+        *l_vec = *l_vec / l_vec->sum();
+    } else {
+        valarray<float> vec = xyz - point;
+        vec = vec / vec.sum();
+    }
+}
 class Shader {
+    vector<Light> lights;
     public :
         Shader();
+        Shader(vector<Light>);
         void get_color(valarray<float> point, valarray<float> normal, Color * c);
 };
 
 Shader::Shader(void) {
+    valarray<float> p1 = {10, 10, 0};
+    Light light1 = Light(p1, false);
+    lights = {light1}; 
 }
 
-void Shader::get_color(valarray<float> point, valarray<float> normal, Color *c) {
-    c->r = 0.5;
-    c->g = 0;
-    c->b = 0.5;
+Shader::Shader(vector<Light> l_list) {
+    lights = l_list;
 }
-
 
 class Raytracer {
     bool is_obj;

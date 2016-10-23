@@ -94,6 +94,58 @@ bool Sphere::t_hit(Ray ray, float* t) {
         }
 }
 
+void Shader::get_color(valarray<float> point, valarray<float> normal, valarray<float> view, Color *c) {
+    Color tmp_pixel_color = Color(0.0, 0.0, 0.0);
+    valarray<float> cur_point = point;
+    Color ambient = Color(0.0, 0.0, 0.0);
+    Color diffuse = Color(0.0, 0.0, 0.0);
+    Color specular = Color(0.0, 0.0, 0.0);
+
+    for(int d = 0; d < lights.size(); d++) {
+      Light cur_light = lights[d];
+      valarray<float> light_vec;
+      cur_light.light_vector(point, &light_vec);
+      Color light_col = cur_light.color;
+      if(cur_light.is_direct()) {
+        light_vec = Vector(-1 * cur_light.x, -1 * cur_light.y, -1 * cur_light.z);
+        light_vec.normalize();
+      } else {
+        Point cur_light_pt = Point(cur_light.x, cur_light.y, cur_light.z);
+        points_to_vector(cur_light_pt, cur_point, &light_vec);
+        light_vec.normalize();
+      }
+      Vector reflect = Vector();
+      reflectance(light_vec, normal, &reflect);
+      reflect.normalize();
+      Color new_ambient = Color();
+      mult_color(KA, light_col, &new_ambient);
+      ambient.add_color(new_ambient);
+      Color new_diffuse = Color();
+      Color diff1 = Color();
+      float l_n = dot(light_vec, normal);
+      float positive_dot = max(l_n,(float)  0.0);
+      mult_color(KD, light_col, &diff1);
+      scale_color(positive_dot, diff1, &new_diffuse);
+      diffuse.add_color(new_diffuse);
+      Color new_specular = Color();
+      Color spec1 = Color();
+      float ref_view = dot(reflect, view);
+      float mx = max(ref_view, (float) 0.0);
+      float power = find_specular_power(normal, view, light_vec);
+      float tmp = pow(mx, power);
+      scale_color(tmp, KS, &spec1);
+      mult_color(spec1, light_col, &new_specular);
+      specular.add_color(new_specular);
+    }
+
+  tmp_pixel_color.add_color(ambient); 
+  tmp_pixel_color.add_color(diffuse); 
+  tmp_pixel_color.add_color(specular); 
+  pixel_color->red = tmp_pixel_color.red;
+  pixel_color->green = tmp_pixel_color.green;
+  pixel_color->blue = tmp_pixel_color.blue;
+}
+
 void Camera::generate_ray(valarray<float> world, Ray* r) {
     //cout << "CAMERA GENERATING RAY" << endl;
     r->point = eye_pos;
