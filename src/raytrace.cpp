@@ -63,6 +63,27 @@ void Film::commit(Sample s, Color c) {
 
 }
 
+bool Sphere::t_hit(Ray ray, float* t) {
+    valarray<float> d = ray.direction;
+    valarray<float> e = ray.point;
+    float discriminant = pow(dot(d,(e - center)), 2) - (dot(d, d)) * (dot(e - center, e - center) - pow(radius, 2));
+    if(discriminant < 0) {
+        *t = -1;
+        return false;
+    }
+    float numerator = -1 * (dot(d, (e-center)));
+    float denominator = dot(d,d);
+    if (discriminant > 0) {
+        float t1 = (numerator + discriminant) / denominator;
+        float t2 = (numerator - discriminant) / denominator;
+        *t = min(t1, t2);
+        return true;
+    } else {
+        *t = numerator / denominator;
+        return true;
+        }
+}
+
 void Camera::generate_ray(valarray<float> world, Ray* r) {
     //cout << "CAMERA GENERATING RAY" << endl;
     r->point = eye_pos;
@@ -75,7 +96,18 @@ void Raytracer::trace(Ray r, Color *c) {
     c->r = 0.5;
     c->g = 0;
     c->b = 0.5;
+    // IF IS OBJ
+    // for all obj polynomials, see if we hit, order them, figure out who is hit first
+    // STEP 1: FIND HIT POINT
+    //STEP 2: CALCULATE NORMAL
+    // for each light source
+    //  STEP 3: SEND SHADOW RAY
+    //  STEP 4: SHADE
+    //  STEP 5: add recursive step
+    
 }
+
+
 
 Sampler::Sampler(void) {
     current_px = 0;
@@ -145,9 +177,9 @@ void Scene::render(void) {
         Color color = Color();
         raytracer.trace(ray, &color);
         film.commit(sample, color);
-        cout << "SAMPLE (u,v): " << sample.x << ", " << sample.y << endl;
-        cout << "WORLD COORD (x,y,z): " << world_cord[0] << "," << world_cord[1] << "," << world_cord[2] << endl;
-        cout << "Ray Direction: "<< ray.direction[0] << "," << ray.direction[1] << "," << ray.direction[2] << endl;
+        //cout << "SAMPLE (u,v): " << sample.x << ", " << sample.y << endl;
+        //cout << "WORLD COORD (x,y,z): " << world_cord[0] << "," << world_cord[1] << "," << world_cord[2] << endl;
+        //cout << "Ray Direction: "<< ray.direction[0] << "," << ray.direction[1] << "," << ray.direction[2] << endl;
     }
     film.write_image();
 }
@@ -155,13 +187,13 @@ void Scene::render(void) {
 void Scene::screen_to_world(valarray<float> screen, valarray<float>* world) {
     float u = (screen[0]+0.5)/resolution_x;
     float v = (screen[1]+0.5)/resolution_y;
-    cout << "UV: " << u << "," << v << endl;
+    //cout << "UV: " << u << "," << v << endl;
     valarray<float> final_point = u * (v * LL + (1.0-v) * UL ) + (1.0 - u) * (v * LR + (1.0 - v) * UR);
-    cout << "Final Point: " << final_point[0] << "," << final_point[1] << "," << final_point[2] << endl;
+    //cout << "Final Point: " << final_point[0] << "," << final_point[1] << "," << final_point[2] << endl;
     world->resize(3);
     world->swap(final_point); 
     valarray<float> w = *world;
-    cout << "World Point: " << w[0] << "," << w[1] << "," << w[2] << endl;
+    //cout << "World Point: " << w[0] << "," << w[1] << "," << w[2] << endl;
 
 }
 

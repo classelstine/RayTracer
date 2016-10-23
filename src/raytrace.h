@@ -12,6 +12,12 @@
 #define PI 3.1415926535
 using namespace std;
 
+
+float dot(valarray<float> v1, valarray<float> v2) {
+    float d = (v1 * v2).sum();
+    return d;
+}
+
 // Ray class represented as a point and a direction
 class Ray {
     public:
@@ -113,11 +119,36 @@ class Film {
 
 class Sphere {
     public:
+        Sphere(valarray<float> c, float r);
         float radius;
-        vector<float> center;
+        valarray<float> center;
+        bool t_hit(Ray ray, float* t);
 };
 
+Sphere::Sphere(valarray<float> c, float r) {
+    radius = r;
+    center = c;
+}
+
+// Triangle class holds three x,y,z cordinates defining a triangle 
+class Triangle {
+    valarray<float> p1;
+    valarray<float> p2;
+    valarray<float> p3;
+    public:
+        Triangle(valarray<float>, valarray<float>, valarray<float>);
+        bool is_hit(Ray ray);
+};
+
+Triangle::Triangle(valarray<float> one, valarray<float> two, valarray<float> three) {
+    p1 = one;
+    p2 = two;
+    p3 = three;
+}
+
+
 class Raytracer {
+    bool is_obj;
     public:
         void trace(Ray, Color*);
         Raytracer();
