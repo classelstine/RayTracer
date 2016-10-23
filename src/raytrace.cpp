@@ -63,8 +63,10 @@ void Film::commit(Sample s, Color c) {
 
 }
 
-void Camera::generate_ray(Sample s, Ray* r) {
+void Camera::generate_ray(valarray<float> world, Ray* r) {
     //cout << "CAMERA GENERATING RAY" << endl;
+    r->point = eye_pos;
+    r->direction = world - eye_pos; 
 }
 
 // Currently is a dummy function which sets the color to 0.5
@@ -107,11 +109,14 @@ bool Sampler::get_sample(Sample *sample){
 }
 
 Scene::Scene(void) {
-    eye_position = {0.0,0.0,-1.0};
-    UL = {1.0,-1.0,0.0};
-    UR = {1.0,1.0,0.0};
-    LL = {-1.0,-1.0,0.0};
-    LR = {-1.0,1.0,0.0};
+    UL.resize(3);
+    UR.resize(3);
+    LL.resize(3);
+    LR.resize(3);
+    UL = {1,1, 0};  
+    UR = {-1,1,0};
+    LL = {1,-1,0};
+    LR = {-1,-1,0};
     resolution_x = 100;
     resolution_y = 100;
     sampler = Sampler();
@@ -133,14 +138,32 @@ void Scene::render(void) {
     Sample sample = Sample();
     while(sampler.get_sample(&sample)) {
         Ray ray = Ray();
-        camera.generate_ray(sample, &ray);
+        valarray<float> world_cord;
+        valarray<float> sample_cord = {sample.x, sample.y};
+        screen_to_world(sample_cord, &world_cord);
+        camera.generate_ray(world_cord, &ray);
         Color color = Color();
         raytracer.trace(ray, &color);
         film.commit(sample, color);
+        cout << "SAMPLE (u,v): " << sample.x << ", " << sample.y << endl;
+        cout << "WORLD COORD (x,y,z): " << world_cord[0] << "," << world_cord[1] << "," << world_cord[2] << endl;
+        cout << "Ray Direction: "<< ray.direction[0] << "," << ray.direction[1] << "," << ray.direction[2] << endl;
     }
     film.write_image();
 }
 
+void Scene::screen_to_world(valarray<float> screen, valarray<float>* world) {
+    float u = (screen[0]+0.5)/resolution_x;
+    float v = (screen[1]+0.5)/resolution_y;
+    cout << "UV: " << u << "," << v << endl;
+    valarray<float> final_point = u * (v * LL + (1.0-v) * UL ) + (1.0 - u) * (v * LR + (1.0 - v) * UR);
+    cout << "Final Point: " << final_point[0] << "," << final_point[1] << "," << final_point[2] << endl;
+    world->resize(3);
+    world->swap(final_point); 
+    valarray<float> w = *world;
+    cout << "World Point: " << w[0] << "," << w[1] << "," << w[2] << endl;
+
+}
 
 int main(int argc, char *argv[]) {
     cout << "Hello World." << endl;

@@ -15,18 +15,22 @@ using namespace std;
 // Ray class represented as a point and a direction
 class Ray {
     public:
-        float px, py, pz, dx, dy, dz;
+        valarray<float> point;
+        valarray<float> direction;
         Ray();
-        Ray(float, float, float, float, float, float);
+        Ray(valarray<float>,valarray<float>);
 };
 
 Ray::Ray(void) {
-    px = 0;
-    py = 0;
-    pz = 0;
-    dx = 1;
-    dy = 1; 
-    dz = 1;
+    point.resize(3);
+    point = {0,0,-1};
+    direction.resize(3);
+    direction = {0,0,1};
+}
+
+Ray::Ray(valarray<float> p, valarray<float> d) {
+    point = p;
+    direction = d;
 }
 
 class Color {
@@ -125,12 +129,15 @@ Raytracer::Raytracer(void) {
 // Camera class, which can take a sample's coordinates and create a ray from the eye location through this point
 // in the image. 
 class Camera {
+    valarray<float> eye_pos;
     public:
         Camera();
-        void generate_ray(Sample cur_sample, Ray* cur_ray);
+        void generate_ray(valarray<float> world_sample, Ray* cur_ray);
 };
 
 Camera::Camera(void) {
+    eye_pos.resize(3);
+    eye_pos = {0,0,-1};
 }
 
 // Scene will hold our Film, Camera
@@ -140,20 +147,21 @@ class Scene {
     Raytracer raytracer;
     Film film;
     public:
-        vector<float> eye_position;
-        vector<float> UL;
-        vector<float> UR;
-        vector<float> LL;
-        vector<float> LR;
+        valarray<float> eye_position;
+        valarray<float> UL;
+        valarray<float> UR;
+        valarray<float> LL;
+        valarray<float> LR;
         float resolution_x;
         float resolution_y;
         Scene();
-        Scene(vector<float>, vector<float>, vector<float>, vector<float>, vector<float>, float, float);
+        Scene(valarray<float>, valarray<float>, valarray<float>, valarray<float>, valarray<float>, float, float);
         void initialize();
         void render();
+        void screen_to_world(valarray<float> screen, valarray<float>* world);
 };
 
-Scene::Scene(vector<float> eye, vector<float> ul, vector<float> ur, vector<float> ll, vector<float> lr, float rx, float ry) {
+Scene::Scene(valarray<float> eye, valarray<float> ul, valarray<float> ur, valarray<float> ll, valarray<float> lr, float rx, float ry) {
     eye_position = eye;
     UL = ul;
     UR = ur;
