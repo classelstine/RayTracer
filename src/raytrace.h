@@ -17,6 +17,10 @@ float dot(valarray<float> v1, valarray<float> v2) {
     return d;
 }
 
+void print_val(const char* s, valarray<float> *v) {
+    cout << s << " : " << v[0] << " , " << v[1] << " , " << v[2] << endl;
+}
+
 void cross(valarray<float> v1, valarray<float>  v2, valarray<float> *v3)  {
     v3[0] = v1[1] * v2[2] - v1[2] * v2[1];
     v3[1] = v1[2] * v2[0] - v1[0] * v2[2];
@@ -247,7 +251,7 @@ class Shader {
 
 Shader::Shader(void) {
     valarray<float> p1 = {10, 10, 0};
-    Color color(1.0, 0, 0);
+    Color color(1.0, 1.0, 1.0);
     Light light1 = Light(p1, color, false);
     lights = {light1};
 }
