@@ -17,6 +17,11 @@ float dot(valarray<float> v1, valarray<float> v2) {
     return d;
 }
 
+void normalize(valarray<float> *v) { 
+    float magnitude = pow(*v, 2)->sum();
+    *v = *v/magnitude;
+} 
+
 // Ray class represented as a point and a direction
 class Ray {
     public:
@@ -64,6 +69,19 @@ void Color::add_color(Color c) {
     g = g + c.g;
     b = b + c.b;
 }
+
+void mult_color(Color c1, Color c2, Color *c3) {
+    c3->r = c1.r * c2.r;
+    c3->g = c1.g * c2.g;
+    c3->b = c1.b * c2.b;
+} 
+
+void scale_color(float c, Color c1, Color *c2) {
+    c2->red = c * c1.red;
+    c2->green = c * c1.green;
+    c2->blue = c * c1.blue;
+}
+
 // Stores Screen Coordinate
 class Sample {
     public:
@@ -119,6 +137,8 @@ class Film {
 
 class Object {
     public: 
+        Color KA, KD, KS;
+        float SPU, SPV;
         virtual bool t_hit(Ray ray, float* t) { cout << "WRONG FUNCTION" << endl; return false; }
         virtual void get_normal(valarray<float> point, valarray<float>* normal);
 };
@@ -129,21 +149,26 @@ void Object::get_normal(valarray<float> point, valarray<float>* normal) {
 
 class Sphere: public Object {
     public:
-        Sphere(valarray<float> c, float r);
+        Sphere(valarray<float> c, float r, Color, Color, Color, float, float);
         float radius;
         valarray<float> center;
         bool t_hit(Ray ray, float* t);
         virtual void get_normal(valarray<float> point, valarray<float>* normal);
 };
 
-Sphere::Sphere(valarray<float> c, float r) {
+Sphere::Sphere(valarray<float> c, float r, Color ka, Color kd, Color ks, float spu, float spv) {
+    KA = ka;
+    KD = kd;
+    KS = ks;
+    SPU = spu;
+    SPV = spv;
     radius = r;
     center = c;
 }
 
 void Sphere::get_normal(valarray<float> p, valarray<float>* n) {
     valarray<float> normal = p - center;
-    normal = normal / normal.sum();
+    normalize(&normal);
     n->swap(normal);
 }
 
@@ -154,12 +179,17 @@ class Triangle : public Object {
     valarray<float> p3;
     valarray<float> normal;
     public:
-        Triangle(valarray<float>, valarray<float>, valarray<float>);
+        Triangle(valarray<float>, valarray<float>, valarray<float>, Color, Color, Color, float, float);
         virtual bool t_hit(Ray ray, float* t);
         virtual void get_normal(valarray<float> point, valarray<float>* normal);
 };
 
-Triangle::Triangle(valarray<float> one, valarray<float> two, valarray<float> three) {
+Triangle::Triangle(valarray<float> one, valarray<float> two, valarray<float> three, Color ka, Color kd, Color ks, float spu, float spv) {
+    KA = ka;
+    KD = kd;
+    KS = ks;
+    SPU = spu;
+    SPV = spv;
     p1 = one;
     p2 = two;
     p3 = three;
@@ -179,41 +209,47 @@ class Light {
     bool is_direct;
     public:
         valarray<float> xyz;
+        Color color;
         Light(valarray<float> p, bool is_d);
         void light_vector(valarray<float> point, valarray<float> *l_vec);
 };
 
-Light::Light(valarray<float> p, bool is_d) {
+Light::Light(valarray<float> p, Color c, bool is_d) {
     xyz = p;
+    color = c;
     is_direct = is_d;
     }
 
 void Light::light_vector(valarray<float> point, valarray<float> *l_vec) {
     if (is_direct) {
-        *l_vec = -xyz;
-        *l_vec = *l_vec / l_vec->sum();
+        *l_vec = -1*xyz;
+        normalize(l_vec);
     } else {
-        valarray<float> vec = xyz - point;
-        vec = vec / vec.sum();
+        *l_vec = xyz - point;
+        normalize(l_vec);
     }
 }
+
 class Shader {
     vector<Light> lights;
     public :
         Shader();
         Shader(vector<Light>);
-        void get_color(valarray<float> point, valarray<float> normal, Color * c);
+        void phong(valarray<float> point, valarray<float> normal, Color * c);
 };
 
 Shader::Shader(void) {
     valarray<float> p1 = {10, 10, 0};
-    Light light1 = Light(p1, false);
+    Color color(1.0, 0, 0);
+    Light light1 = Light(p1, color, false);
     lights = {light1}; 
 }
 
 Shader::Shader(vector<Light> l_list) {
     lights = l_list;
 }
+
+void reflectance(valarray<float> light_source, valarray<float> normal, valarray<float> *reflectance);
 
 class Raytracer {
     bool is_obj;
