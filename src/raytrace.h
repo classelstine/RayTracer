@@ -17,8 +17,15 @@ float dot(valarray<float> v1, valarray<float> v2) {
     return d;
 }
 
+void cross(valarray<float> v1, valarray<float>  v2, valarray<float> *v3)  {
+    v3[0] = v1[1] * v2[2] - v1[2] * v2[1];
+    v3[1] = v1[2] * v2[0] - v1[0] * v2[2];
+    v3[2] = v1[0] * v2[1] - v1[1] * v2[0];
+}
+
 void normalize(valarray<float> *v) { 
-    float magnitude = pow(*v, 2)->sum();
+    valarray<float> p = pow(*v, 2);
+    float magnitude = p.sum();
     *v = *v/magnitude;
 } 
 
@@ -77,9 +84,9 @@ void mult_color(Color c1, Color c2, Color *c3) {
 } 
 
 void scale_color(float c, Color c1, Color *c2) {
-    c2->red = c * c1.red;
-    c2->green = c * c1.green;
-    c2->blue = c * c1.blue;
+    c2->r = c * c1.r;
+    c2->g = c * c1.g;
+    c2->b = c * c1.b;
 }
 
 // Stores Screen Coordinate
@@ -210,7 +217,7 @@ class Light {
     public:
         valarray<float> xyz;
         Color color;
-        Light(valarray<float> p, bool is_d);
+        Light(valarray<float> p, Color c, bool is_d);
         void light_vector(valarray<float> point, valarray<float> *l_vec);
 };
 
@@ -235,14 +242,14 @@ class Shader {
     public :
         Shader();
         Shader(vector<Light>);
-        void phong(valarray<float> point, valarray<float> normal, Color * c);
+        void phong(valarray<float> point, valarray<float> normal, valarray<float> view, Color * c, Object *obj);
 };
 
 Shader::Shader(void) {
     valarray<float> p1 = {10, 10, 0};
     Color color(1.0, 0, 0);
     Light light1 = Light(p1, color, false);
-    lights = {light1}; 
+    lights = {light1};
 }
 
 Shader::Shader(vector<Light> l_list) {
@@ -250,6 +257,8 @@ Shader::Shader(vector<Light> l_list) {
 }
 
 void reflectance(valarray<float> light_source, valarray<float> normal, valarray<float> *reflectance);
+
+float find_specular_power(valarray<float> normal, valarray<float> view, valarray<float> light_vec, Object *obj);
 
 class Raytracer {
     bool is_obj;

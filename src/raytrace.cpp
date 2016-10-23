@@ -13,7 +13,7 @@ Color KD = Color(0.0, 0.0, 0.0);
 Color KS = Color(0.0, 0.0, 0.0);
 float SPU = 2;
 float SPV = 2;
-Sphere* s1 = new Sphere(c1, 2.0, 0.5, 0.); 
+Sphere* s1 = new Sphere(c1, 2.0, KA, KD, KS, SPU, SPV); 
 Object* objects[] = {s1};
 
 
@@ -104,7 +104,38 @@ bool Sphere::t_hit(Ray ray, float* t) {
 void reflectance(valarray<float> light_source, valarray<float> normal, valarray<float> *reflectance) { 
     *reflectance = -1*light_source + 2*dot(light_source, normal)*normal;
     normalize(reflectance);
-} 
+}
+
+float find_specular_power(valarray<float> normal, valarray<float> view, valarray<float> light_vec, Object* obj) {
+    float p;
+    if(obj->SPU == obj->SPV) {
+        p = obj->SPU;
+    } else {
+        //find half angle h = norm(l + v) 
+        valarray<float> half_angle = light_vec +view;
+        normalize(&half_angle);
+
+        //find v vector = norm(y - n(n*y)) y = [0,1,0]
+        valarray<float> parametric_v = {0.0, 0.0, 0.0};
+        valarray<float> y = {0.0, 1.0, 0.0};
+        float tmp = -1*dot(normal, y); 
+        valarray<float> scaled_normal = tmp * normal;
+        parametric_v = y + scaled_normal;
+        normalize(&parametric_v);
+
+        //find u vector = norm(cross(v, n)) 
+        valarray<float> parametric_u = {0.0, 0.0, 0.0}; 
+        cross(parametric_v, normal, &parametric_u); 
+        normalize(&parametric_u);
+
+        //find specular exponent = p_u(h*u)^2 + p_v(h*v)^2/1 - (h*n)^2
+        float tmp_hu =(obj->SPU)*pow(dot(half_angle, parametric_u), 2); 
+        float tmp_hv = (obj->SPV)*pow(dot(half_angle, parametric_v), 2); 
+        float denominator = 1 - pow(dot(half_angle, normal), 2);
+        p = (tmp_hu + tmp_hv)/denominator;
+    } 
+    return p;
+}
 
 void Shader::phong(valarray<float> point, valarray<float> normal, valarray<float> view, Color *c, Object *obj) {
     Color tmp_pixel_color = Color(0.0, 0.0, 0.0);
@@ -134,7 +165,7 @@ void Shader::phong(valarray<float> point, valarray<float> normal, valarray<float
       Color spec1 = Color();
       float ref_view = dot(reflect, view);
       float mx = max(ref_view, (float) 0.0);
-      float power = find_specular_power(normal, view, light_vec);
+      float power = find_specular_power(normal, view, light_vec, obj);
       float tmp = pow(mx, power);
       scale_color(tmp, obj->KS, &spec1);
       mult_color(spec1, light_col, &new_specular);
@@ -144,9 +175,9 @@ void Shader::phong(valarray<float> point, valarray<float> normal, valarray<float
   tmp_pixel_color.add_color(ambient); 
   tmp_pixel_color.add_color(diffuse); 
   tmp_pixel_color.add_color(specular); 
-  pixel_color->r = tmp_pixel_color.r;
-  pixel_color->g = tmp_pixel_color.g;
-  pixel_color->b = tmp_pixel_color.b;
+  c->r = tmp_pixel_color.r;
+  c->g = tmp_pixel_color.g;
+  c->b = tmp_pixel_color.b;
 }
 
 void Camera::generate_ray(valarray<float> world, Ray* r) {
@@ -158,6 +189,8 @@ void Camera::generate_ray(valarray<float> world, Ray* r) {
 // Currently is a dummy function which sets the color to 0.5
 void Raytracer::trace(Ray r, Color *c) {
     cout << "RAY TRACER TRACING" << endl;
+    valarray<float> view = -1 * r.direction;
+    normalize(&view);
     // IF IS OBJ
     // for all obj polynomials, see if we hit, order them, figure out who is hit first
     for(Object* cur_object : objects) {
@@ -170,8 +203,8 @@ void Raytracer::trace(Ray r, Color *c) {
             r.eval(t, &cord);
             valarray<float> cur_norm = {0.0,0.0,0.0};
             cur_object->get_normal(cord, &cur_norm);
-            shader.get_color(cord, cur_norm, c);
-            
+            Color cur_color = Color();
+            shader.phong(cord, cur_norm, view, &cur_color, cur_object);    
         }
     }
     // STEP 1: FIND HIT POINT
