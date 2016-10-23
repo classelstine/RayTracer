@@ -12,7 +12,6 @@
 #define PI 3.1415926535
 using namespace std;
 
-
 float dot(valarray<float> v1, valarray<float> v2) {
     float d = (v1 * v2).sum();
     return d;
@@ -25,6 +24,7 @@ class Ray {
         valarray<float> direction;
         Ray();
         Ray(valarray<float>,valarray<float>);
+        void eval(float t, valarray<float>* cord);
 };
 
 Ray::Ray(void) {
@@ -117,12 +117,23 @@ class Film {
         Film(void);
 };
 
-class Sphere {
+class Object {
+    public: 
+        virtual bool t_hit(Ray ray, float* t) { cout << "WRONG FUNCTION" << endl; return false; }
+        virtual void get_normal(valarray<float> point, valarray<float>* normal);
+};
+
+
+void Object::get_normal(valarray<float> point, valarray<float>* normal) {
+}
+
+class Sphere: public Object {
     public:
         Sphere(valarray<float> c, float r);
         float radius;
         valarray<float> center;
         bool t_hit(Ray ray, float* t);
+        virtual void get_normal(valarray<float> point, valarray<float>* normal);
 };
 
 Sphere::Sphere(valarray<float> c, float r) {
@@ -130,31 +141,67 @@ Sphere::Sphere(valarray<float> c, float r) {
     center = c;
 }
 
+void Sphere::get_normal(valarray<float> p, valarray<float>* n) {
+    valarray<float> normal = p - center;
+    normal = normal / normal.sum();
+    n->swap(normal);
+}
+
 // Triangle class holds three x,y,z cordinates defining a triangle 
-class Triangle {
+class Triangle : public Object {
     valarray<float> p1;
     valarray<float> p2;
     valarray<float> p3;
+    valarray<float> normal;
     public:
         Triangle(valarray<float>, valarray<float>, valarray<float>);
-        bool is_hit(Ray ray);
+        virtual bool t_hit(Ray ray, float* t);
+        virtual void get_normal(valarray<float> point, valarray<float>* normal);
 };
 
 Triangle::Triangle(valarray<float> one, valarray<float> two, valarray<float> three) {
     p1 = one;
     p2 = two;
     p3 = three;
+    // CURRENTLY DUMMY VARIABLE NEED TO CALCULATE NORMAL VECTOR
+    normal = {1,1,1};
+}
+
+void Triangle::get_normal(valarray<float> p, valarray<float>* n) {
+    *n = {normal[0],normal[1],normal[2]};
+}
+// NEEDS TO BE IMPLEMENTED
+bool Triangle::t_hit(Ray ray, float *t) {
+    return false;
+}
+
+class Shader {
+    public :
+        Shader();
+        void get_color(valarray<float> point, valarray<float> normal, Color * c);
+};
+
+Shader::Shader(void) {
+}
+
+void Shader::get_color(valarray<float> point, valarray<float> normal, Color *c) {
+    c->r = 0.5;
+    c->g = 0;
+    c->b = 0.5;
 }
 
 
 class Raytracer {
     bool is_obj;
+    Shader shader;
     public:
         void trace(Ray, Color*);
         Raytracer();
 };
 
 Raytracer::Raytracer(void) {
+   is_obj = true;
+   shader = Shader();
 }
 
 // Camera class, which can take a sample's coordinates and create a ray from the eye location through this point

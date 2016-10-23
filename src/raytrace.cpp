@@ -7,6 +7,15 @@ Scene *scn;
 int x_resolution = 100;
 int y_resolution = 100;
 int samples_per_pix = 1;
+valarray<float> c1 = {0.0, 0.0, 10.0};
+Sphere* s1 = new Sphere(c1, 2.0); 
+Object* objects[] = {s1};
+
+void Ray::eval(float t, valarray<float>* cord) {
+    valarray<float> new_cord = point + t * direction;
+    cord->resize(3);
+    cord->swap(new_cord);
+}
 
 // The Film class holds a bucket of Colors for each pixel value
 Film::Film(int x_res, int y_res, int sample_rate) {
@@ -64,6 +73,7 @@ void Film::commit(Sample s, Color c) {
 }
 
 bool Sphere::t_hit(Ray ray, float* t) {
+    //cout<< "in sphere t_hit" << endl;
     valarray<float> d = ray.direction;
     valarray<float> e = ray.point;
     float discriminant = pow(dot(d,(e - center)), 2) - (dot(d, d)) * (dot(e - center, e - center) - pow(radius, 2));
@@ -92,12 +102,23 @@ void Camera::generate_ray(valarray<float> world, Ray* r) {
 
 // Currently is a dummy function which sets the color to 0.5
 void Raytracer::trace(Ray r, Color *c) {
-    //cout << "RAY TRACER TRACING" << endl;
-    c->r = 0.5;
-    c->g = 0;
-    c->b = 0.5;
+    cout << "RAY TRACER TRACING" << endl;
     // IF IS OBJ
     // for all obj polynomials, see if we hit, order them, figure out who is hit first
+    for(Object* cur_object : objects) {
+        float t = 0.0;
+        //cout << "Trying to hit" << endl;
+        if (cur_object->t_hit(r, &t)) {
+            cout << "HIT!" << endl;
+            valarray<float> cord = {0,0,0};
+            // NOW CORD IS OUR x,y,z point of intersection. 
+            r.eval(t, &cord);
+            valarray<float> cur_norm = {0.0,0.0,0.0};
+            cur_object->get_normal(cord, &cur_norm);
+            shader.get_color(cord, cur_norm, c);
+            
+        }
+    }
     // STEP 1: FIND HIT POINT
     //STEP 2: CALCULATE NORMAL
     // for each light source
