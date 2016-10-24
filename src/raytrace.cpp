@@ -7,17 +7,17 @@ Scene *scn;
 int x_resolution = 1000;
 int y_resolution = 1000;
 int samples_per_pix = 1;
-valarray<float> c1 = {0.0, 0.0, 10.0};
+valarray<float> c1 = {0.0, 0.0, 50.0};
 Color KA = Color(0.0, 0.0, 0.0);
 //Color KA = Color(0.0, 0.0, 0.0);
-Color KD = Color(0.9, 0.5, 0.1);
+Color KD = Color(0.5, 0.5, 0.0);
 //Color KD = Color(0.0, 0.0, 0.0);
-Color KS = Color(0.8, 0.4, 0.0);
+Color KS = Color(0.5, 0.5, 0.0);
 //Color KS = Color(0.0, 0.0, 0.0);
 float SPU = 2;
 float SPV = 2;
-valarray<float> c2 = {8.0, 9.0, 20.0};
-Color KA1 = Color(0.0, 0.0, 0.0);
+valarray<float> c2 = {20.0, 0.0, 50.0};
+Color KA1 = Color(0.2, 0.2, 0.2);
 //Color KA = Color(0.0, 0.0, 0.0);
 Color KD1 = Color(0.9, 0.5, 0.1);
 //Color KD = Color(0.0, 0.0, 0.0);
@@ -26,16 +26,14 @@ float SPU1 = 2;
 float SPV1 = 2;
 Material m1 = Material(KA, KD, KS, SPU, SPV);
 Material m2 = Material(KA1, KD1, KS1, SPU1, SPV1);
-Sphere* s1 = new Sphere(c1, 2.0, m1); 
-Sphere* s2 = new Sphere(c2, 2.0, m2); 
+Sphere* s1 = new Sphere(c1, 10.0, m1); 
+Sphere* s2 = new Sphere(c2, 1.0, m2); 
 //Object* objects[] = {s1,s2};
 valarray<float> p1 = {-1, -1, 10};
 valarray<float> p2 = {0, 1, 10};
 valarray<float> p3 = {1, -1, 10};
 Triangle* t1 = new Triangle(p1, p2, p3, m1);
-Object* objects[] = {t1};
-
-
+vector<Object*> objects = {s1};
 
 void dist(valarray<float> p1, valarray<float> p2, float* d);
 /*
@@ -249,7 +247,7 @@ bool Triangle::t_hit(Ray ray, float *t) {
  */
 
 bool shaddow_hit(Light light, valarray<float> point) {
-    float epsilon = 0.0001;
+    float epsilon = 0.00001;
     valarray<float> light_dir = {0.0,0.0,0.0};
     light.light_vector(point, &light_dir);
     Ray s = Ray(point, light_dir);
@@ -262,7 +260,13 @@ bool shaddow_hit(Light light, valarray<float> point) {
     for (Object* obj : objects) {
         if(obj->t_hit(s, &t)) {
             if (t < light_t && t > epsilon) {
-                light_hit = false;
+               // light_hit = false;
+               /*
+                cout << "SHADOW RAY HIT"<< endl;
+                cout << "POINT: " << point[0] << "," << point[1] << "," << point[2] << endl;
+                cout << "s:" << s.direction[0] << "," << s.direction[1] << "," << s.direction[2] << endl; 
+                cout << "t:" << t << " light_t = " << light_t << endl;
+                */
             }
         }
     }
@@ -300,6 +304,7 @@ void Shader::phong(valarray<float> point, valarray<float> normal, valarray<float
       ambient.add_color(new_ambient);
       
       if (shaddow_hit(cur_light, point)) {
+          //cout<< "RETURNED TRUE" << endl;
           //DIFFUSE
           Color new_diffuse = Color();
           Color diff1 = Color();
@@ -326,6 +331,7 @@ void Shader::phong(valarray<float> point, valarray<float> normal, valarray<float
   //cout << "diffuse r,g,b: " << diffuse.r << " " << diffuse.g << " " << diffuse.b << endl;
   tmp_pixel_color.add_color(specular); 
   //cout << "specular r,g,b: " << specular.r << " " << specular.g << " " << specular.b << endl;
+
   c->r = min(tmp_pixel_color.r, (float) 1.0);
   c->g = min(tmp_pixel_color.g, (float) 1.0);
   c->b = min(tmp_pixel_color.b, (float) 1.0);
@@ -397,6 +403,7 @@ void Raytracer::trace(Ray r, Color *c) {
             r.eval(t, &cord);
             valarray<float> cur_norm = {0.0,0.0,0.0};
             cur_object->get_normal(cord, &cur_norm);
+            cout << "point to be shaded: " << cord[0] << "," << cord[1] << "," << cord[2] << endl;
             shader.phong(cord, cur_norm, view, c, &cur_object->material);    
         }
     }
@@ -506,6 +513,20 @@ void Scene::screen_to_world(valarray<float> screen, valarray<float>* world) {
 
 int main(int argc, char *argv[]) {
     cout << "Hello World." << endl;
+    float r = 2;
+    valarray<float> center;
+    /*
+    Material m = Material();
+    for (int i = -10; i < 10; i+=10) {
+        for(int j = -10; j < 10; j+=10) {
+            for(int k = 10; k < 30; k+=10) {
+                center = {i, j, k};
+                objects.push_back(new Sphere(center, r, m));
+            }
+        }
+    }
+    */
+
     Scene* scn = new Scene();
     scn->initialize();
     scn->render();

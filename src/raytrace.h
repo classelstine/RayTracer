@@ -231,9 +231,9 @@ Material::Material(Color ka, Color kd, Color ks, float spu, float spv) {
 }
 
 Material::Material(void) {
-    KA = Color(0.5, 0.5, 0.5);
-    KD = Color(0.5, 0.5, 0.5);
-    KS = Color(0.5, 0.5, 0.5);
+    KA = Color(.8, 0.2, 0.0);
+    KD = Color(0.7, 0.2, 0.0);
+    KS = Color(0.7, 0.2, 0.0);
     SPU = 2;
     SPV = 2;
 }
@@ -382,14 +382,17 @@ Shader::Shader(void) {
     Color color(1.0, 1.0, 1.0);
     Light light1 = Light(p1, color, false);
     */
-    valarray<float> p1 = {10, 0, 0};
-    valarray<float> p2 = {0, 10, 0};
-    Color color(1.0, 1.0, 0.0);
-    Color color1(0.0, 1.0, 1.0);
+    valarray<float> p1 = {0.0, 0.0, 0.0};
+    valarray<float> p2 = {0, 20, 0};
+    valarray<float> d = {-1, -1, 1};
+    Color white(1.0, 1.0, 1.0);
+    Color color(1.0, 1.0, 1.0);
+    Color color1(0.0, 0.2, 0.2);
     Light light1 = Light(p1, color, false);
     Light light2 = Light(p2, color1, false);
-    //lights = {light1};
-    lights = {light1,light2};
+    Light light3 = Light(d, white, true);
+    lights = {light1};
+    //lights = {light1,light2,light3};
 }
 
 Shader::Shader(vector<Light> l_list) {
