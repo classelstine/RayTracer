@@ -36,6 +36,8 @@ Triangle* t1 = new Triangle(p1, p2, p3, m1);
 Object* objects[] = {t1};
 
 
+
+void dist(valarray<float> p1, valarray<float> p2, float* d);
 /*
  *                      FILM CLASS
  * The film class holds our data structure where we store our image.
@@ -246,6 +248,28 @@ bool Triangle::t_hit(Ray ray, float *t) {
  *
  */
 
+bool shaddow_hit(Light light, valarray<float> point) {
+    float epsilon = 0.0001;
+    valarray<float> light_dir = {0.0,0.0,0.0};
+    light.light_vector(point, &light_dir);
+    Ray s = Ray(point, light_dir);
+    float t = 0.0;
+    bool light_hit = true;
+    float light_t = numeric_limits<float>::max();
+    if (!light.is_direct) {
+        dist(light.xyz, point, &light_t);
+    }
+    for (Object* obj : objects) {
+        if(obj->t_hit(s, &t)) {
+            if (t < light_t && t > epsilon) {
+                light_hit = false;
+            }
+        }
+    }
+    return light_hit;
+}
+
+
 void Shader::phong(valarray<float> point, valarray<float> normal, valarray<float> view, Color *c, Material *obj) {
     Color tmp_pixel_color = Color(0.0, 0.0, 0.0);
     valarray<float> cur_point = point;
@@ -274,25 +298,28 @@ void Shader::phong(valarray<float> point, valarray<float> normal, valarray<float
       Color new_ambient = Color();
       mult_color(obj->KA, light_col, &new_ambient);
       ambient.add_color(new_ambient);
-      //DIFFUSE
-      Color new_diffuse = Color();
-      Color diff1 = Color();
-      float l_n = dot(light_vec, normal);
-      float positive_dot = max(l_n,(float)  0.0);
-      mult_color(obj->KD, light_col, &diff1);
-      scale_color(positive_dot, diff1, &new_diffuse);
-      diffuse.add_color(new_diffuse);
-      //SPECULAR 
-      Color new_specular = Color();
-      Color spec1 = Color();
-      float ref_view = dot(reflect, view);
-      //cout << "dot of reflect and view: " << ref_view << endl;
-      float mx = max(ref_view, (float) 0.0);
-      float power = find_specular_power(normal, view, light_vec, obj);
-      float tmp = pow(mx, power);
-      scale_color(tmp, obj->KS, &spec1);
-      mult_color(spec1, light_col, &new_specular);
-      specular.add_color(new_specular);
+      
+      if (shaddow_hit(cur_light, point)) {
+          //DIFFUSE
+          Color new_diffuse = Color();
+          Color diff1 = Color();
+          float l_n = dot(light_vec, normal);
+          float positive_dot = max(l_n,(float)  0.0);
+          mult_color(obj->KD, light_col, &diff1);
+          scale_color(positive_dot, diff1, &new_diffuse);
+          diffuse.add_color(new_diffuse);
+          //SPECULAR 
+          Color new_specular = Color();
+          Color spec1 = Color();
+          float ref_view = dot(reflect, view);
+          //cout << "dot of reflect and view: " << ref_view << endl;
+          float mx = max(ref_view, (float) 0.0);
+          float power = find_specular_power(normal, view, light_vec, obj);
+          float tmp = pow(mx, power);
+          scale_color(tmp, obj->KS, &spec1);
+          mult_color(spec1, light_col, &new_specular);
+          specular.add_color(new_specular);
+      }
     }
   tmp_pixel_color.add_color(ambient); 
   tmp_pixel_color.add_color(diffuse); 

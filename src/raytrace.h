@@ -28,6 +28,13 @@ void cross(valarray<float> v1, valarray<float>  v2, valarray<float> *v3)  {
     */
 }
 
+void dist(valarray<float> p1, valarray<float> p2, float* d) {
+    valarray<float> v = p1 - p2;
+    valarray<float> tmp = pow(v, 2);
+    float magnitude = sqrt(tmp.sum());
+    *d = magnitude;
+}
+
 //normalize valarrays
 void normalize(valarray<float> *v) { 
     valarray<float> p = *v;
@@ -325,8 +332,8 @@ void Triangle::get_normal(valarray<float> p, valarray<float>* n) {
  */
 
 class Light {
-    bool is_direct;
     public:
+        bool is_direct;
         valarray<float> xyz;
         Color color;
         Light(valarray<float> p, Color c, bool is_d);
