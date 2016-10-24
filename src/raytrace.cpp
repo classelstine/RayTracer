@@ -8,22 +8,36 @@ int x_resolution = 1000;
 int y_resolution = 1000;
 int samples_per_pix = 1;
 valarray<float> c1 = {0.0, 0.0, 10.0};
-Color KA = Color(0.6, 0.2, 0.7);
+Color KA = Color(0.5, 0.1, 0.1);
+//Color KA = Color(0.0, 0.0, 0.0);
 Color KD = Color(0.1, 0.8, 0.4);
+//Color KD = Color(0.0, 0.0, 0.0);
 Color KS = Color(0.3, 0.7, 0.2);
+//Color KS = Color(0.0, 0.0, 0.0);
 float SPU = 2;
 float SPV = 2;
+valarray<float> c2 = {8.0, 9.0, 20.0};
+Color KA1 = Color(0.3, 0.3, 0.0);
+//Color KA = Color(0.0, 0.0, 0.0);
+Color KD1 = Color(0.9, 0.05, 0.9);
+//Color KD = Color(0.0, 0.0, 0.0);
+Color KS1 = Color(1.0, 1.0, 1.0);
+float SPU1 = 8;
+float SPV1 = 4;
 Sphere* s1 = new Sphere(c1, 2.0, KA, KD, KS, SPU, SPV); 
-Object* objects[] = {s1};
+Sphere* s2 = new Sphere(c2, 2.0, KA1, KD1, KS1, SPU1, SPV1); 
+Object* objects[] = {s1,s2};
 
 
-void Ray::eval(float t, valarray<float>* cord) {
-    valarray<float> new_cord = point + t * direction;
-    cord->resize(3);
-    cord->swap(new_cord);
-}
+/*
+ *                      FILM CLASS
+ * The film class holds our data structure where we store our image.
+ * It's main functions are commit and write image. Commit assigns a 
+ * pixel a color by pushing it back to a vector of existing colors. 
+ * When we write the image we average over each pixel bucket and use 
+ * an opensource header file to save the image.
+ */
 
-// The Film class holds a bucket of Colors for each pixel value
 Film::Film(int x_res, int y_res, int sample_rate) {
    pixel_buckets = vector<vector<vector<Color>>> (x_res, vector<vector<Color>>(y_res, vector<Color>(sample_rate, Color(0,0,0))));
 }
@@ -49,6 +63,18 @@ void Film::write_image(void) {
             int p_index = row*w + col;
             cur_index = 3*p_index;
             Color cur_color = pixel_buckets[row][col][0];
+            if (cur_color.r > 1) {
+                cout << "red bigger" << endl;
+                cout << cur_color.r << endl;
+            } 
+            if (cur_color.g > 1) {
+                cout << "green bigger" << endl;
+                cout << cur_color.g << endl;
+            } 
+            if (cur_color.b > 1) {
+                cout << "blue bigger" << endl;
+                cout << cur_color.b << endl;
+            } 
             avg_pixels[cur_index] = cur_color.r * 255;
             avg_pixels[cur_index+1] = cur_color.g * 255;
             avg_pixels[cur_index+2] = cur_color.b * 255;
@@ -78,6 +104,60 @@ void Film::commit(Sample s, Color c) {
 
 }
 
+
+/*
+ *                  SAMPLER CLASS
+ * For now, the sampler just generates a single sample in the center of each pixel. 
+ * It will generate (x,y) of a screen sample and return true. Next time it gets called, 
+ * it will generate another sample for the next pixel. It will return false when all the
+ * samples from all the pixels are generated. In our case, we generate 1 sample per pixel, 
+ * at the pixel sample. Later on, if we want to do multi-sample per pixel, we need to 
+ * modify this class.
+ *
+ */
+Sampler::Sampler(void) {
+    current_px = 0;
+    current_py = 0;
+    max_x = 999;
+    max_y = 999;
+}
+
+Sampler::Sampler(int x_res, int y_res) {
+    current_px = 0;
+    current_py = 0;
+    max_x = x_res-1;
+    max_y = y_res-1;
+}
+
+
+bool Sampler::get_sample(Sample *sample){
+    // set this sample to the current sample (in screen coords) 
+    sample->x = current_px;
+    sample->y = current_py;
+    // update next sample
+    if (current_px < max_x) {
+        current_px += 1;
+    } else if (current_py < max_y) {
+        current_px = 0;
+        current_py += 1;
+    } else {
+        return false;
+    }
+    return true;
+}
+/*
+ *                      OBJECT CLASS
+ *  This class is a representation of all the objects we are going to hold 
+ *  in our scene. Right now we have implemented the sphere and triangle classes.
+ *  Sphere is defined by its center and radius. 
+ *  Trinagle is defined by its three vertices. 
+ *  Each object has a unique implementation of t_hit, which sees if our
+ *  traced ray intersects with the object. We get these implementations from Shirley.
+ *  Each object also implements get_normal, which we use for shading and intersection
+ *  calcultions.
+ *  Each object has a KA, KD, KS, SPU, SPV value, which we use for shading. 
+ */
+
 bool Sphere::t_hit(Ray ray, float* t) {
     //cout<< "in sphere t_hit" << endl;
     valarray<float> d = ray.direction;
@@ -100,10 +180,79 @@ bool Sphere::t_hit(Ray ray, float* t) {
         }
 }
 
+/*
+ *                      SHADER CLASS
+ * This holds the light environment of our scene. Lights is a 
+ * list of lights that is currently in our environment. We can 
+ * call phong on an object, normal, point and view to be able 
+ * to calculate the resulting color. 
+ *
+ */
+
+void Shader::phong(valarray<float> point, valarray<float> normal, valarray<float> view, Color *c, Object *obj) {
+    Color tmp_pixel_color = Color(0.0, 0.0, 0.0);
+    valarray<float> cur_point = point;
+    Color ambient = Color(0.0, 0.0, 0.0);
+    Color diffuse = Color(0.0, 0.0, 0.0);
+    Color specular = Color(0.0, 0.0, 0.0);
+    /*
+    cout << "r: " << obj->KA.r << obj->KA.g <<endl;
+    cout << obj->KA.g << endl;
+    cout << obj->KA.b << endl;
+    */
+    //cout << "normal vector " << normal[0] << " " << normal[1] << " " << normal[2] << endl;
+    //cout << "view vector " << view[0] << " " << view[1] << " " << view[2] << endl;
+
+    for(int d = 0; d < lights.size(); d++) {
+      Light cur_light = lights[d];
+      valarray<float> light_vec = {0.0,0.0,0.0};
+      cur_light.light_vector(point, &light_vec);
+      //cout << "light vector " << light_vec[0] << " " << light_vec[1] << " " << light_vec[2] << endl;
+      Color light_col = cur_light.color;
+      valarray<float> reflect = {0.0,0.0,0.0};
+      reflectance(light_vec, normal, &reflect);
+      //cout << "reflect vector " << reflect[0] << " " << reflect[1] << " " << reflect[2] << endl;
+      //AMBIENT
+      Color new_ambient = Color();
+      mult_color(obj->KA, light_col, &new_ambient);
+      ambient.add_color(new_ambient);
+      //DIFFUSE
+      Color new_diffuse = Color();
+      Color diff1 = Color();
+      float l_n = dot(light_vec, normal);
+      float positive_dot = max(l_n,(float)  0.0);
+      mult_color(obj->KD, light_col, &diff1);
+      scale_color(positive_dot, diff1, &new_diffuse);
+      diffuse.add_color(new_diffuse);
+      //SPECULAR 
+      Color new_specular = Color();
+      Color spec1 = Color();
+      float ref_view = dot(reflect, view);
+      //cout << "dot of reflect and view: " << ref_view << endl;
+      float mx = max(ref_view, (float) 0.0);
+      float power = find_specular_power(normal, view, light_vec, obj);
+      float tmp = pow(mx, power);
+      scale_color(tmp, obj->KS, &spec1);
+      mult_color(spec1, light_col, &new_specular);
+      specular.add_color(new_specular);
+    }
+  tmp_pixel_color.add_color(ambient); 
+  tmp_pixel_color.add_color(diffuse); 
+  //cout << "diffuse r,g,b: " << diffuse.r << " " << diffuse.g << " " << diffuse.b << endl;
+  tmp_pixel_color.add_color(specular); 
+  //cout << "specular r,g,b: " << specular.r << " " << specular.g << " " << specular.b << endl;
+  c->r = min(tmp_pixel_color.r, (float) 1.0);
+  c->g = min(tmp_pixel_color.g, (float) 1.0);
+  c->b = min(tmp_pixel_color.b, (float) 1.0);
+}
 
 void reflectance(valarray<float> light_source, valarray<float> normal, valarray<float> *reflectance) { 
     *reflectance = -1*light_source + 2*dot(light_source, normal)*normal;
+    valarray<float> r = *reflectance;
+    //cout << "reflect vector pre-normalize " << r[0] << " " << r[1] << " " << r[2] << endl;
     normalize(reflectance);
+    normalize(&r);
+    //cout << "r vector post-normalize " << r[0] << " " << r[1] << " " << r[2] << endl;
 }
 
 float find_specular_power(valarray<float> normal, valarray<float> view, valarray<float> light_vec, Object* obj) {
@@ -137,62 +286,16 @@ float find_specular_power(valarray<float> normal, valarray<float> view, valarray
     return p;
 }
 
-void Shader::phong(valarray<float> point, valarray<float> normal, valarray<float> view, Color *c, Object *obj) {
-    Color tmp_pixel_color = Color(0.0, 0.0, 0.0);
-    valarray<float> cur_point = point;
-    Color ambient = Color(0.0, 0.0, 0.0);
-    Color diffuse = Color(0.0, 0.0, 0.0);
-    Color specular = Color(0.0, 0.0, 0.0);
-    /*
-    cout << "r: " << obj->KA.r << obj->KA.g <<endl;
-    cout << obj->KA.g << endl;
-    cout << obj->KA.b << endl;
-    */
 
-    for(int d = 0; d < lights.size(); d++) {
-      Light cur_light = lights[d];
-      valarray<float> light_vec = {0.0,0.0,0.0};
-      cur_light.light_vector(point, &light_vec);
-      Color light_col = cur_light.color;
-      valarray<float> reflect = {0.0,0.0,0.0};
-      reflectance(light_vec, normal, &reflect);
-      Color new_ambient = Color();
-      mult_color(obj->KA, light_col, &new_ambient);
-      ambient.add_color(new_ambient);
-      Color new_diffuse = Color();
-      Color diff1 = Color();
-      float l_n = dot(light_vec, normal);
-      float positive_dot = max(l_n,(float)  0.0);
-      mult_color(obj->KD, light_col, &diff1);
-      scale_color(positive_dot, diff1, &new_diffuse);
-      diffuse.add_color(new_diffuse);
-      Color new_specular = Color();
-      Color spec1 = Color();
-      float ref_view = dot(reflect, view);
-      float mx = max(ref_view, (float) 0.0);
-      float power = find_specular_power(normal, view, light_vec, obj);
-      float tmp = pow(mx, power);
-      scale_color(tmp, obj->KS, &spec1);
-      mult_color(spec1, light_col, &new_specular);
-      specular.add_color(new_specular);
-    }
-  tmp_pixel_color.add_color(ambient); 
-  tmp_pixel_color.add_color(diffuse); 
-  cout << "diffuse r,g,b: " << diffuse.r << " " << diffuse.g << " " << diffuse.b << endl;
-  tmp_pixel_color.add_color(specular); 
-  cout << "specular r,g,b: " << specular.r << " " << specular.g << " " << specular.b << endl;
-  c->r = tmp_pixel_color.r;
-  c->g = tmp_pixel_color.g;
-  c->b = tmp_pixel_color.b;
-}
+/*
+ *                      RAYTRACER CLASS
+ * Raytracer traces a ray - this is its main function. The raytracer takes
+ * a ray and knows a shading a environment. It sends the ray out through our
+ * view window and sees if it intersects with any object if it does interesect 
+ * it uses the shader to compute the resulting shader value. 
+ *
+ */
 
-void Camera::generate_ray(valarray<float> world, Ray* r) {
-    //cout << "CAMERA GENERATING RAY" << endl;
-    r->point = eye_pos;
-    r->direction = world - eye_pos; 
-}
-
-// Currently is a dummy function which sets the color to 0.5
 void Raytracer::trace(Ray r, Color *c) {
     //cout << "RAY TRACER TRACING" << endl;
     valarray<float> view = -1 * r.direction;
@@ -221,38 +324,44 @@ void Raytracer::trace(Ray r, Color *c) {
     
 }
 
+/*
+ *                  RAY CLASS
+ * A parametrized ray defined by a point and a direction. 
+ * Both are represented by valarrays for element-wise 
+ * calculations. 
+ *
+ */
 
-
-Sampler::Sampler(void) {
-    current_px = 0;
-    current_py = 0;
-    max_x = 999;
-    max_y = 999;
+//Givees the xyz coordinate of the ray path at time t
+void Ray::eval(float t, valarray<float>* cord) {
+    valarray<float> new_cord = point + t * direction;
+    cord->resize(3);
+    cord->swap(new_cord);
 }
 
-Sampler::Sampler(int x_res, int y_res) {
-    current_px = 0;
-    current_py = 0;
-    max_x = x_res-1;
-    max_y = y_res-1;
+/*
+ *                      CAMERA CLASS
+ * Camera class, which can take a sample's coordinates and create a ray from the eye 
+ * location through this point in the image. It holds the eye position of the 
+ * scene and given any sample it generates a ray from the eye postion through the 
+ * xyz coordinate of the sample.
+ *
+ */
+
+void Camera::generate_ray(valarray<float> world, Ray* r) {
+    //cout << "CAMERA GENERATING RAY" << endl;
+    r->point = eye_pos;
+    r->direction = world - eye_pos; 
 }
 
-
-bool Sampler::get_sample(Sample *sample){
-    // set this sample to the current sample (in screen coords) 
-    sample->x = current_px;
-    sample->y = current_py;
-    // update next sample
-    if (current_px < max_x) {
-        current_px += 1;
-    } else if (current_py < max_y) {
-        current_px = 0;
-        current_py += 1;
-    } else {
-        return false;
-    }
-    return true;
-}
+/*
+ *                      SCENE CLASS
+ * Given an eye position and image plane coordinates holds corresponding sampler, 
+ * camera, raytracer and film. It's most important function is render, which uses
+ * the sampler iterator to generate the color values for every pixel in our view 
+ * window and then uses the film to write the image to a png file.
+ *
+ */
 
 Scene::Scene(void) {
     UL.resize(3);

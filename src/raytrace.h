@@ -12,28 +12,36 @@
 #define PI 3.1415926535
 using namespace std;
 
+//dot valarrays
 float dot(valarray<float> v1, valarray<float> v2) {
     float d = (v1 * v2).sum();
     return d;
 }
 
-void print_val(const char* s, valarray<float> *v) {
-    cout << s << " : " << v[0] << " , " << v[1] << " , " << v[2] << endl;
-}
-
+//cross valarrays
 void cross(valarray<float> v1, valarray<float>  v2, valarray<float> *v3)  {
     v3[0] = v1[1] * v2[2] - v1[2] * v2[1];
     v3[1] = v1[2] * v2[0] - v1[0] * v2[2];
     v3[2] = v1[0] * v2[1] - v1[1] * v2[0];
 }
 
+//normalize valarrays
 void normalize(valarray<float> *v) { 
-    valarray<float> p = pow(*v, 2);
-    float magnitude = p.sum();
-    *v = *v/magnitude;
+    valarray<float> p = *v;
+    valarray<float> tmp = pow(p, 2);
+    float magnitude = sqrt(tmp.sum());
+    p /= magnitude; 
+    *v = p;
+    //*v = (*v)*(1/magnitude);
 } 
 
-// Ray class represented as a point and a direction
+/*
+ *                  RAY CLASS
+ * A parametrized ray defined by a point and a direction. 
+ * Both are represented by valarrays for element-wise 
+ * calculations. 
+ *
+ */
 class Ray {
     public:
         valarray<float> point;
@@ -54,6 +62,15 @@ Ray::Ray(valarray<float> p, valarray<float> d) {
     point = p;
     direction = d;
 }
+
+/*
+ *                  COLOR CLASS
+ *  Representation of color with three floats for r,g,b. 
+ *  The floats are between 0 and 1. We define various 
+ *  operations for the color class like add, multiply, 
+ *  and scale so that we can use our shading models.
+ *
+ */
 
 class Color {
     public:
@@ -93,6 +110,12 @@ void scale_color(float c, Color c1, Color *c2) {
     c2->b = c * c1.b;
 }
 
+/*
+ *                  SAMPLE CLASS
+ * It holds a sample that represents our current screen coordinate. 
+ * Implemented to interact with SAMPLER CLASS 
+ *
+ */
 // Stores Screen Coordinate
 class Sample {
     public:
@@ -112,11 +135,18 @@ Sample::Sample(void) {
     y = 0;
 }
 
+/*
+ *                  SAMPLER CLASS
+ * For now, the sampler just generates a single sample in the center of each pixel. 
+ * It will generate (x,y) of a screen sample and return true. Next time it gets called, 
+ * it will generate another sample for the next pixel. It will return false when all the
+ * samples from all the pixels are generated. In our case, we generate 1 sample per pixel, 
+ * at the pixel sample. Later on, if we want to do multi-sample per pixel, we need to 
+ * modify this class.
+ *
+ */
+
 class Sampler {
-    // For now, the sampler just generates a single sample in the center of each pixel. 
-    // It will generate (x,y) of a screen sample and return true.
-    // Next time it gets called, it will generate another sample for the next pixel. It will return false when all the samples from all the pixels
-    // are generated. (In our case, we generate 1 sample per pixel, at the pixel sample. Later on, if we want to do multi-sample per pixel, we need to modify this class.
     int current_px;
     int current_py;
     int max_x;
@@ -127,17 +157,16 @@ class Sampler {
         Sampler();
 };
 
-//bool Sampler::get_sample(Sample* sample);
-
-class Matrix {
-    public:
-        float mat[4][4];
-        Matrix();
-};
+/*
+ *                      FILM CLASS
+ * The film class holds our data structure where we store our image.
+ * It's main functions are commit and write image. Commit assigns a 
+ * pixel a color by pushing it back to a vector of existing colors. 
+ * When we write the image we average over each pixel bucket and use 
+ * an opensource header file to save the image.
+ */
 
 class Film {
-    // The Film aggregates samples, storing them in buckets (one bucket for each pixel). When it's time to write out the file, the Film averages all the samples in each pixel's bucket to produce that pixel's output color. 
-    // Each pixel is designated one bucket of Color vectors, once all samples are created, each bucket is averaged to create the color for each pixel.
     vector<vector<vector<Color>>> pixel_buckets;
        public:
         void commit(Sample sample, Color color);
@@ -145,6 +174,19 @@ class Film {
         Film(int, int, int);
         Film(void);
 };
+
+/*
+ *                      OBJECT CLASS
+ *  This class is a representation of all the objects we are going to hold 
+ *  in our scene. Right now we have implemented the sphere and triangle classes.
+ *  Sphere is defined by its center and radius. 
+ *  Trinagle is defined by its three vertices. 
+ *  Each object has a unique implementation of t_hit, which sees if our
+ *  traced ray intersects with the object. We get these implementations from Shirley.
+ *  Each object also implements get_normal, which we use for shading and intersection
+ *  calcultions.
+ *  Each object has a KA, KD, KS, SPU, SPV value, which we use for shading. 
+ */
 
 class Object {
     public: 
@@ -216,6 +258,17 @@ bool Triangle::t_hit(Ray ray, float *t) {
     return false;
 }
 
+/*
+ *                      LIGHT CLASS
+ * Representation of a light, which is used for our shading model. We
+ * have directional and point lights. 
+ * A point light is located at xyz. 
+ * A point light is coming at a direction of xyz.
+ * We implement light_vector, which returns the vector from our point to 
+ * the light source. 
+ *
+ */
+
 class Light {
     bool is_direct;
     public:
@@ -241,6 +294,15 @@ void Light::light_vector(valarray<float> point, valarray<float> *l_vec) {
     }
 }
 
+/*
+ *                      SHADER CLASS
+ * This holds the light environment of our scene. Lights is a 
+ * list of lights that is currently in our environment. We can 
+ * call phong on an object, normal, point and view to be able 
+ * to calculate the resulting color. 
+ *
+ */
+
 class Shader {
     vector<Light> lights;
     public :
@@ -250,10 +312,18 @@ class Shader {
 };
 
 Shader::Shader(void) {
+    /*
     valarray<float> p1 = {10, 10, 0};
     Color color(1.0, 1.0, 1.0);
     Light light1 = Light(p1, color, false);
-    lights = {light1};
+    */
+    valarray<float> p1 = {1, 1, 1};
+    valarray<float> p2 = {10, 10, 0};
+    Color color(1.0, 1.0, 1.0);
+    Color color1(1.0, 1.0, 0.0);
+    Light light1 = Light(p1, color, true);
+    Light light2 = Light(p2, color1, false);
+    lights = {light1,light2};
 }
 
 Shader::Shader(vector<Light> l_list) {
@@ -263,6 +333,15 @@ Shader::Shader(vector<Light> l_list) {
 void reflectance(valarray<float> light_source, valarray<float> normal, valarray<float> *reflectance);
 
 float find_specular_power(valarray<float> normal, valarray<float> view, valarray<float> light_vec, Object *obj);
+
+/*
+ *                      RAYTRACER CLASS
+ * Raytracer traces a ray - this is its main function. The raytracer takes
+ * a ray and knows a shading a environment. It sends the ray out through our
+ * view window and sees if it intersects with any object if it does interesect 
+ * it uses the shader to compute the resulting shader value. 
+ *
+ */
 
 class Raytracer {
     bool is_obj;
@@ -277,8 +356,15 @@ Raytracer::Raytracer(void) {
    shader = Shader();
 }
 
-// Camera class, which can take a sample's coordinates and create a ray from the eye location through this point
-// in the image. 
+/*
+ *                      CAMERA CLASS
+ * Camera class, which can take a sample's coordinates and create a ray from the eye 
+ * location through this point in the image. It holds the eye position of the 
+ * scene and given any sample it generates a ray from the eye postion through the 
+ * xyz coordinate of the sample.
+ *
+ */
+
 class Camera {
     valarray<float> eye_pos;
     public:
@@ -290,6 +376,15 @@ Camera::Camera(void) {
     eye_pos.resize(3);
     eye_pos = {0,0,-1};
 }
+
+/*
+ *                      SCENE CLASS
+ * Given an eye position and image plane coordinates holds corresponding sampler, 
+ * camera, raytracer and film. It's most important function is render, which uses
+ * the sampler iterator to generate the color values for every pixel in our view 
+ * window and then uses the film to write the image to a png file.
+ *
+ */
 
 // Scene will hold our Film, Camera
 class Scene {
