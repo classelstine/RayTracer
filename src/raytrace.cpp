@@ -8,25 +8,32 @@ int x_resolution = 1000;
 int y_resolution = 1000;
 int samples_per_pix = 1;
 valarray<float> c1 = {0.0, 0.0, 10.0};
-Color KA = Color(0.5, 0.1, 0.1);
+Color KA = Color(0.0, 0.0, 0.0);
 //Color KA = Color(0.0, 0.0, 0.0);
-Color KD = Color(0.1, 0.8, 0.4);
+Color KD = Color(0.9, 0.5, 0.1);
 //Color KD = Color(0.0, 0.0, 0.0);
-Color KS = Color(0.3, 0.7, 0.2);
+Color KS = Color(0.8, 0.4, 0.0);
 //Color KS = Color(0.0, 0.0, 0.0);
 float SPU = 2;
 float SPV = 2;
 valarray<float> c2 = {8.0, 9.0, 20.0};
-Color KA1 = Color(0.3, 0.3, 0.0);
+Color KA1 = Color(0.0, 0.0, 0.0);
 //Color KA = Color(0.0, 0.0, 0.0);
-Color KD1 = Color(0.9, 0.05, 0.9);
+Color KD1 = Color(0.9, 0.5, 0.1);
 //Color KD = Color(0.0, 0.0, 0.0);
-Color KS1 = Color(1.0, 1.0, 1.0);
-float SPU1 = 8;
-float SPV1 = 4;
-Sphere* s1 = new Sphere(c1, 2.0, KA, KD, KS, SPU, SPV); 
-Sphere* s2 = new Sphere(c2, 2.0, KA1, KD1, KS1, SPU1, SPV1); 
-Object* objects[] = {s1,s2};
+Color KS1 = Color(0.8, 0.4, 0.0);
+float SPU1 = 2;
+float SPV1 = 2;
+Material m1 = Material(KA, KD, KS, SPU, SPV);
+Material m2 = Material(KA1, KD1, KS1, SPU1, SPV1);
+Sphere* s1 = new Sphere(c1, 2.0, m1); 
+Sphere* s2 = new Sphere(c2, 2.0, m2); 
+//Object* objects[] = {s1,s2};
+valarray<float> p1 = {-1, -1, 10};
+valarray<float> p2 = {0, 1, 10};
+valarray<float> p3 = {1, -1, 10};
+Triangle* t1 = new Triangle(p1, p2, p3, m1);
+Object* objects[] = {t1};
 
 
 /*
@@ -38,11 +45,17 @@ Object* objects[] = {s1,s2};
  * an opensource header file to save the image.
  */
 
-Film::Film(int x_res, int y_res, int sample_rate) {
-   pixel_buckets = vector<vector<vector<Color>>> (x_res, vector<vector<Color>>(y_res, vector<Color>(sample_rate, Color(0,0,0))));
+Film::Film(int x_res, int y_res, int sr) {
+    res_x = x_res;
+    res_y = y_res;
+    sample_rate = sr;
+   pixel_buckets = vector<vector<vector<Color>>> (x_res, vector<vector<Color>>(y_res, vector<Color>(sr, Color(0,0,0))));
 }
 
 Film::Film(void) {
+    res_x = 1000;
+    res_y = 1000;
+    sample_rate = 1;
     pixel_buckets = vector<vector<vector<Color>>> (1000, vector<vector<Color>>(1000, vector<Color>(1, Color(0,0,0))));
 }
 
@@ -51,16 +64,16 @@ void Film::write_image(void) {
     cout << "ATTEMPTING TO WRITE IMAGE" << endl;
     char const* filename = "test_image";
     // DO NOT LEAVE THIS. THIS IS A TEST. 
-    int w = 1000;
-    int h = 1000;
-    int stride = 3*w;
+    int stride = 3*res_x;
     int comp = 3;
     int cur_index;
-    uint8_t avg_pixels[w * h * 3];
+    uint8_t avg_pixels[res_x * res_y * 3];
     // NEEDS TO BE REPLACED WITH FINDING AVERGE FOR EACH PIXEL BUCKET
-    for(int row = 0; row < h; row++) {
-        for(int col = 0; col < w; col++) {
-            int p_index = row*w + col;
+    for(int w_row = 0; w_row < res_y; w_row++) {
+        for(int col = 0; col < res_x; col++) {
+            int row = res_y - w_row - 1;
+            //int col = res_x - w_col - 1; // DOUBLE CHECK THESE PLEASE
+            int p_index = row*res_x + col;
             cur_index = 3*p_index;
             Color cur_color = pixel_buckets[row][col][0];
             if (cur_color.r > 1) {
@@ -88,7 +101,7 @@ void Film::write_image(void) {
         }
     }
 
-    stbi_write_png(filename, w, h, comp, &avg_pixels, stride);
+    stbi_write_png(filename, res_x, res_y, comp, &avg_pixels, stride);
     cout << "FILE WRITTEN" << endl;
 }
 
@@ -180,6 +193,50 @@ bool Sphere::t_hit(Ray ray, float* t) {
         }
 }
 
+// With points in counterclockwise direction, ONE, TWO and THREE,
+// returns if a ray intersects a triangle. If there is a hit, calculates 
+// the corresponding ray's t value at the intersection, as well as 
+// BETA and GAMMA satisfying:
+// RAY(t) = ONE + BETA * TWO + GAMMA * THREE
+bool Triangle::t_hit(Ray ray, float *t) {
+    
+    float a = p1[0] - p2[0];
+    float b = p1[1] - p2[1];
+    float c = p1[2] - p2[2];
+
+    float d = p1[0] - p3[0];
+    float e = p1[1] - p3[1];
+    float f = p1[2] - p3[2];
+
+    float g = ray.direction[0];
+    float h = ray.direction[1];
+    float i = ray.direction[2];
+
+    float j = p1[0] - ray.point[0];
+    float k = p1[1] - ray.point[1];
+    float l = p1[2] - ray.point[2];
+
+    float ei = e*i;
+    float hf = h*f;
+    float gf = g*f;
+    float di = d*i;
+    float dh = d*h;
+    float eg = e*g;
+
+    float M = a * (ei - hf) + b * (gf - di) + c * (dh - eg);
+    float beta = (j*(ei - hf) + k*(gf - di) + l*(dh - eg)) / M ;
+    float gamma = (i*(a*k - j*b) + h*(j*c - a*l) + g*(b*l - k*c)) / M;
+    float t_found = (-1) * (f*(a*k - j*b) + e*(j*c - a*l) + d*(b*l - k*c)) / M;
+    
+    if (t_found < 0 || beta < 0 || gamma < 0 || (beta + gamma) > 1) {
+        *t = -1;
+        return false;
+    }
+
+    *t = t_found;
+    return true;
+}
+
 /*
  *                      SHADER CLASS
  * This holds the light environment of our scene. Lights is a 
@@ -189,12 +246,13 @@ bool Sphere::t_hit(Ray ray, float* t) {
  *
  */
 
-void Shader::phong(valarray<float> point, valarray<float> normal, valarray<float> view, Color *c, Object *obj) {
+void Shader::phong(valarray<float> point, valarray<float> normal, valarray<float> view, Color *c, Material *obj) {
     Color tmp_pixel_color = Color(0.0, 0.0, 0.0);
     valarray<float> cur_point = point;
     Color ambient = Color(0.0, 0.0, 0.0);
     Color diffuse = Color(0.0, 0.0, 0.0);
     Color specular = Color(0.0, 0.0, 0.0);
+    //cout << " CURRENTLY PROCESSING POINT : " << point[0] << "," << point[1] << "," << point[2] << endl;
     /*
     cout << "r: " << obj->KA.r << obj->KA.g <<endl;
     cout << obj->KA.g << endl;
@@ -255,7 +313,7 @@ void reflectance(valarray<float> light_source, valarray<float> normal, valarray<
     //cout << "r vector post-normalize " << r[0] << " " << r[1] << " " << r[2] << endl;
 }
 
-float find_specular_power(valarray<float> normal, valarray<float> view, valarray<float> light_vec, Object* obj) {
+float find_specular_power(valarray<float> normal, valarray<float> view, valarray<float> light_vec, Material* obj) {
     float p;
     if(obj->SPU == obj->SPV) {
         p = obj->SPU;
@@ -312,7 +370,7 @@ void Raytracer::trace(Ray r, Color *c) {
             r.eval(t, &cord);
             valarray<float> cur_norm = {0.0,0.0,0.0};
             cur_object->get_normal(cord, &cur_norm);
-            shader.phong(cord, cur_norm, view, c, cur_object);    
+            shader.phong(cord, cur_norm, view, c, &cur_object->material);    
         }
     }
     // STEP 1: FIND HIT POINT
@@ -411,13 +469,12 @@ void Scene::screen_to_world(valarray<float> screen, valarray<float>* world) {
     float u = (screen[0]+0.5)/resolution_x;
     float v = (screen[1]+0.5)/resolution_y;
     //cout << "UV: " << u << "," << v << endl;
-    valarray<float> final_point = u * (v * LL + (1.0-v) * UL ) + (1.0 - u) * (v * LR + (1.0 - v) * UR);
+    valarray<float> final_point = (1.0 - u) * (v * LL + (1.0-v) * UL ) + (u) * (v * LR + (1.0 - v) * UR);
     //cout << "Final Point: " << final_point[0] << "," << final_point[1] << "," << final_point[2] << endl;
     world->resize(3);
     world->swap(final_point); 
     valarray<float> w = *world;
     //cout << "World Point: " << w[0] << "," << w[1] << "," << w[2] << endl;
-
 }
 
 int main(int argc, char *argv[]) {

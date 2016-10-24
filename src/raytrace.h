@@ -20,9 +20,12 @@ float dot(valarray<float> v1, valarray<float> v2) {
 
 //cross valarrays
 void cross(valarray<float> v1, valarray<float>  v2, valarray<float> *v3)  {
+    *v3 = {v1[1] * v2[2] - v1[2] * v2[1], v1[2] * v2[0] - v1[0] * v2[2], v1[0] * v2[1] - v1[1] * v2[0]};
+    /*
     v3[0] = v1[1] * v2[2] - v1[2] * v2[1];
     v3[1] = v1[2] * v2[0] - v1[0] * v2[2];
     v3[2] = v1[0] * v2[1] - v1[1] * v2[0];
+    */
 }
 
 //normalize valarrays
@@ -168,12 +171,47 @@ class Sampler {
 
 class Film {
     vector<vector<vector<Color>>> pixel_buckets;
+    int res_x;
+    int res_y;
+    int sample_rate;
        public:
         void commit(Sample sample, Color color);
         void write_image();
         Film(int, int, int);
         Film(void);
 };
+
+/*
+ *                  MATERIAL CLASS
+ *  This class is a representation of material behaviors, such as KA, KD, KS, 
+ *  SPU, SPV, refraction, transparency, and reflection. All resulting in the
+ *  way an object will end up looking (glossy, rough, metallic, etc)
+ *
+*/
+
+class Material {
+    public:
+        Color KA, KD, KS;
+        float SPU, SPV;
+        Material(Color, Color, Color, float, float);
+        Material();
+};
+
+Material::Material(Color ka, Color kd, Color ks, float spu, float spv) {
+    KA = ka;
+    KD = kd;
+    KS = ks;
+    SPU = spu;
+    SPV = spv;
+}
+
+Material::Material(void) {
+    KA = Color(0.5, 0.5, 0.5);
+    KD = Color(0.5, 0.5, 0.5);
+    KS = Color(0.5, 0.5, 0.5);
+    SPU = 2;
+    SPV = 2;
+}
 
 /*
  *                      OBJECT CLASS
@@ -186,12 +224,12 @@ class Film {
  *  Each object also implements get_normal, which we use for shading and intersection
  *  calcultions.
  *  Each object has a KA, KD, KS, SPU, SPV value, which we use for shading. 
+ *  ** NEEDS A BOUNDING BOX FUNCTION **
  */
 
 class Object {
     public: 
-        Color KA, KD, KS;
-        float SPU, SPV;
+        Material material;
         virtual bool t_hit(Ray ray, float* t) { cout << "WRONG FUNCTION" << endl; return false; }
         virtual void get_normal(valarray<float> point, valarray<float>* normal);
 };
@@ -202,21 +240,17 @@ void Object::get_normal(valarray<float> point, valarray<float>* normal) {
 
 class Sphere: public Object {
     public:
-        Sphere(valarray<float> c, float r, Color, Color, Color, float, float);
+        Sphere(valarray<float> c, float r, Material);
         float radius;
         valarray<float> center;
         bool t_hit(Ray ray, float* t);
         virtual void get_normal(valarray<float> point, valarray<float>* normal);
 };
 
-Sphere::Sphere(valarray<float> c, float r, Color ka, Color kd, Color ks, float spu, float spv) {
-    KA = ka;
-    KD = kd;
-    KS = ks;
-    SPU = spu;
-    SPV = spv;
+Sphere::Sphere(valarray<float> c, float r, Material m) {
     radius = r;
     center = c;
+    material = m;
 }
 
 void Sphere::get_normal(valarray<float> p, valarray<float>* n) {
@@ -232,31 +266,29 @@ class Triangle : public Object {
     valarray<float> p3;
     valarray<float> normal;
     public:
-        Triangle(valarray<float>, valarray<float>, valarray<float>, Color, Color, Color, float, float);
+        Triangle(valarray<float>, valarray<float>, valarray<float>, Material);
         virtual bool t_hit(Ray ray, float* t);
         virtual void get_normal(valarray<float> point, valarray<float>* normal);
 };
 
-Triangle::Triangle(valarray<float> one, valarray<float> two, valarray<float> three, Color ka, Color kd, Color ks, float spu, float spv) {
-    KA = ka;
-    KD = kd;
-    KS = ks;
-    SPU = spu;
-    SPV = spv;
+Triangle::Triangle(valarray<float> one, valarray<float> two, valarray<float> three, Material m) {
+    material = m;
     p1 = one;
     p2 = two;
     p3 = three;
-    // CURRENTLY DUMMY VARIABLE NEED TO CALCULATE NORMAL VECTOR
-    normal = {1,1,1};
+    cout << "creating triangle" << endl;
+    normal = {0,0,0};
+    cross(three-two, three-one, &normal);
+    cout << "cross done" << endl;
+    cout << "nomral vector " << normal[0] << " " << normal[1] << " " << normal[2] << endl;
+    normalize(&normal);
+    cout << "end create triangle" << endl;
 }
 
 void Triangle::get_normal(valarray<float> p, valarray<float>* n) {
     *n = {normal[0],normal[1],normal[2]};
 }
 // NEEDS TO BE IMPLEMENTED
-bool Triangle::t_hit(Ray ray, float *t) {
-    return false;
-}
 
 /*
  *                      LIGHT CLASS
@@ -308,7 +340,7 @@ class Shader {
     public :
         Shader();
         Shader(vector<Light>);
-        void phong(valarray<float> point, valarray<float> normal, valarray<float> view, Color * c, Object *obj);
+        void phong(valarray<float> point, valarray<float> normal, valarray<float> view, Color * c, Material *mat);
 };
 
 Shader::Shader(void) {
@@ -317,12 +349,13 @@ Shader::Shader(void) {
     Color color(1.0, 1.0, 1.0);
     Light light1 = Light(p1, color, false);
     */
-    valarray<float> p1 = {1, 1, 1};
-    valarray<float> p2 = {10, 10, 0};
-    Color color(1.0, 1.0, 1.0);
-    Color color1(1.0, 1.0, 0.0);
-    Light light1 = Light(p1, color, true);
+    valarray<float> p1 = {10, 0, 0};
+    valarray<float> p2 = {0, 10, 0};
+    Color color(1.0, 1.0, 0.0);
+    Color color1(0.0, 1.0, 1.0);
+    Light light1 = Light(p1, color, false);
     Light light2 = Light(p2, color1, false);
+    //lights = {light1};
     lights = {light1,light2};
 }
 
@@ -332,7 +365,7 @@ Shader::Shader(vector<Light> l_list) {
 
 void reflectance(valarray<float> light_source, valarray<float> normal, valarray<float> *reflectance);
 
-float find_specular_power(valarray<float> normal, valarray<float> view, valarray<float> light_vec, Object *obj);
+float find_specular_power(valarray<float> normal, valarray<float> view, valarray<float> light_vec, Material *obj);
 
 /*
  *                      RAYTRACER CLASS
