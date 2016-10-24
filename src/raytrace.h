@@ -39,7 +39,10 @@ void normalize(valarray<float> *v) {
 } 
 
 /*
- *                  RAY CLASS
+ *                    +===========+
+ *                    | RAY CLASS |
+ *                    +===========+
+ *
  * A parametrized ray defined by a point and a direction. 
  * Both are represented by valarrays for element-wise 
  * calculations. 
@@ -67,7 +70,10 @@ Ray::Ray(valarray<float> p, valarray<float> d) {
 }
 
 /*
- *                  COLOR CLASS
+ *                    +=============+
+ *                    | COLOR CLASS |
+ *                    +=============+
+ *
  *  Representation of color with three floats for r,g,b. 
  *  The floats are between 0 and 1. We define various 
  *  operations for the color class like add, multiply, 
@@ -114,7 +120,10 @@ void scale_color(float c, Color c1, Color *c2) {
 }
 
 /*
- *                  SAMPLE CLASS
+ *                    +==============+
+ *                    | SAMPLE CLASS |
+ *                    +==============+
+ *
  * It holds a sample that represents our current screen coordinate. 
  * Implemented to interact with SAMPLER CLASS 
  *
@@ -139,7 +148,10 @@ Sample::Sample(void) {
 }
 
 /*
- *                  SAMPLER CLASS
+ *                    +===============+
+ *                    | SAMPLER CLASS |
+ *                    +===============+
+ *
  * For now, the sampler just generates a single sample in the center of each pixel. 
  * It will generate (x,y) of a screen sample and return true. Next time it gets called, 
  * it will generate another sample for the next pixel. It will return false when all the
@@ -161,12 +173,16 @@ class Sampler {
 };
 
 /*
- *                      FILM CLASS
+ *                    +============+
+ *                    | FILM CLASS |
+ *                    +============+
+ *
  * The film class holds our data structure where we store our image.
  * It's main functions are commit and write image. Commit assigns a 
  * pixel a color by pushing it back to a vector of existing colors. 
  * When we write the image we average over each pixel bucket and use 
  * an opensource header file to save the image.
+ *
  */
 
 class Film {
@@ -181,8 +197,10 @@ class Film {
         Film(void);
 };
 
-/*
- *                  MATERIAL CLASS
+/*                  +================+
+ *                  | MATERIAL CLASS |
+ *                  +================+
+ *
  *  This class is a representation of material behaviors, such as KA, KD, KS, 
  *  SPU, SPV, refraction, transparency, and reflection. All resulting in the
  *  way an object will end up looking (glossy, rough, metallic, etc)
@@ -214,7 +232,10 @@ Material::Material(void) {
 }
 
 /*
- *                      OBJECT CLASS
+ *                    +==============+
+ *                    | OBJECT CLASS |
+ *                    +==============+
+ *
  *  This class is a representation of all the objects we are going to hold 
  *  in our scene. Right now we have implemented the sphere and triangle classes.
  *  Sphere is defined by its center and radius. 
@@ -224,7 +245,6 @@ Material::Material(void) {
  *  Each object also implements get_normal, which we use for shading and intersection
  *  calcultions.
  *  Each object has a KA, KD, KS, SPU, SPV value, which we use for shading. 
- *  ** NEEDS A BOUNDING BOX FUNCTION **
  */
 
 class Object {
@@ -291,7 +311,10 @@ void Triangle::get_normal(valarray<float> p, valarray<float>* n) {
 // NEEDS TO BE IMPLEMENTED
 
 /*
- *                      LIGHT CLASS
+ *                    +=============+
+ *                    | LIGHT CLASS |
+ *                    +=============+
+ *
  * Representation of a light, which is used for our shading model. We
  * have directional and point lights. 
  * A point light is located at xyz. 
@@ -327,7 +350,10 @@ void Light::light_vector(valarray<float> point, valarray<float> *l_vec) {
 }
 
 /*
- *                      SHADER CLASS
+ *                    +==============+
+ *                    | SHADER CLASS |
+ *                    +==============+
+ *
  * This holds the light environment of our scene. Lights is a 
  * list of lights that is currently in our environment. We can 
  * call phong on an object, normal, point and view to be able 
@@ -368,7 +394,10 @@ void reflectance(valarray<float> light_source, valarray<float> normal, valarray<
 float find_specular_power(valarray<float> normal, valarray<float> view, valarray<float> light_vec, Material *obj);
 
 /*
- *                      RAYTRACER CLASS
+ *                    +=================+
+ *                    | RAYTRACER CLASS |
+ *                    +=================+
+ *
  * Raytracer traces a ray - this is its main function. The raytracer takes
  * a ray and knows a shading a environment. It sends the ray out through our
  * view window and sees if it intersects with any object if it does interesect 
@@ -390,7 +419,10 @@ Raytracer::Raytracer(void) {
 }
 
 /*
- *                      CAMERA CLASS
+ *                    +==============+
+ *                    | CAMERA CLASS |
+ *                    +==============+
+ *
  * Camera class, which can take a sample's coordinates and create a ray from the eye 
  * location through this point in the image. It holds the eye position of the 
  * scene and given any sample it generates a ray from the eye postion through the 
@@ -411,7 +443,10 @@ Camera::Camera(void) {
 }
 
 /*
- *                      SCENE CLASS
+ *                    +=============+
+ *                    | SCENE CLASS |
+ *                    +=============+
+ *
  * Given an eye position and image plane coordinates holds corresponding sampler, 
  * camera, raytracer and film. It's most important function is render, which uses
  * the sampler iterator to generate the color values for every pixel in our view 
