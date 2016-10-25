@@ -257,13 +257,18 @@ Material::Material(void) {
 class Object {
     public: 
         Material material;
+        virtual void dist(valarray<float>, float*);
         virtual bool t_hit(Ray ray, float* t) { cout << "WRONG FUNCTION" << endl; return false; }
         virtual void get_normal(valarray<float> point, valarray<float>* normal);
 };
 
+void Object::dist(valarray<float> cur_pt,float* d) {
+}
+
 
 void Object::get_normal(valarray<float> point, valarray<float>* normal) {
 }
+
 
 class Func_Sphere: public Object {
     public:
@@ -525,6 +530,7 @@ class Raytracer {
     public:
         void trace(Ray, Color*);
         Raytracer();
+        void reflectance_harshil(Ray, Color*, float);
 };
 
 Raytracer::Raytracer(void) {

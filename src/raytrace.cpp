@@ -7,6 +7,7 @@ Scene *scn;
 int x_resolution = 1000;
 int y_resolution = 1000;
 int samples_per_pix = 1;
+float max_recursive_depth;
 valarray<float> c1 = {0.0, 0.0, 10.0};
 Color KA = Color(0.5, 0.5, 0.0);
 //Color KA = Color(0.0, 0.0, 0.0);
@@ -93,13 +94,6 @@ void Film::write_image(void) {
             avg_pixels[cur_index] = cur_color.r * 255;
             avg_pixels[cur_index+1] = cur_color.g * 255;
             avg_pixels[cur_index+2] = cur_color.b * 255;
-            //avg_pixels[cur_index] = 0;
-            //avg_pixels[cur_index+1] = 0;
-            //avg_pixels[cur_index+2] = 0;
-            //float d = sqrt(pow((h/2) -row, 2) + pow((w/2) -col, 2));
-            //if (d < 50) {
-            //    avg_pixels[cur_index] = 1000;
-            //}
         }
     }
 
@@ -267,6 +261,7 @@ bool shadow_hit(Light light, valarray<float> point) {
             valarray<float> cord;
             light_ray.eval(t, &cord);
             float norm = sqrt(pow((cord-point), 2).sum());
+            // need to change this so you only make it false if you found something CLOSER to the light
             if (norm > epsilon) {
                 light_hit = false;
                 //cout << "shadow ray hit" << endl;
@@ -425,7 +420,7 @@ void Raytracer::trace(Ray r, Color *c) {
     //cout << "RAY TRACER TRACING" << endl;
     valarray<float> view = -1 * r.direction;
     normalize(&view);
-    // IF IS OBJ
+    Color next_color = Color();
     // for all obj polynomials, see if we hit, order them, figure out who is hit first
     for(Object* cur_object : objects) {
         float t = 0.0;
@@ -438,15 +433,54 @@ void Raytracer::trace(Ray r, Color *c) {
             valarray<float> cur_norm = {0.0,0.0,0.0};
             cur_object->get_normal(cord, &cur_norm);
             //cout << "point to be shaded: " << cord[0] << "," << cord[1] << "," << cord[2] << endl;
-            shader.phong(cord, cur_norm, view, c, &cur_object->material);    
+            shader.phong(cord, cur_norm, view, c, &cur_object->material);
+            valarray<float> reflect = {0.0,0.0,0.0};
+            reflectance(-1 * r.direction , cur_norm, &reflect);
+            Ray new_ray = Ray(cord, reflect);
+            reflectance_harshil(new_ray, &next_color, 0);
         }
     }
-    // STEP 1: FIND HIT POINT
-    //STEP 2: CALCULATE NORMAL
-    // for each light source
-    //  STEP 3: SEND SHADOW RAY
-    //  STEP 4: SHADE
-    //  STEP 5: add recursive step
+}
+
+void Raytracer::reflectance_harshil(Ray ray, Color *c, float depth) {
+    if (depth >= max_recursive_depth) {
+        *c = Color(0.0, 0.0, 0.0);
+    }
+    valarray<float> view = -1 * ray.direction;
+    Color next_color = Color();
+    Color cur_color = Color();
+    Object* cur_object = objects[0];
+    float epsilon = 0.01;
+    float max_val = 1000;
+    valarray<float> cur_pt = {0.0,0.0,0.0};
+    float step_size = 0.01;
+    float cur_t = 0;
+    float d = 0;
+    float prev_d = 0;
+    bool decreasing = true;
+    while(cur_t < max_val && decreasing) {
+        ray.eval(cur_t, &cur_pt);
+        cur_object->dist(cur_pt, &d);
+        if (d < prev_d) {
+            decreasing = false;          
+        }
+        prev_d = d;
+        cur_t = cur_t + step_size;
+    }
+    Ray r = Ray(cur_pt, ray.direction);
+    if (cur_object->t_hit(r, &cur_t)) {
+        valarray<float> cord = {0,0,0};
+        r.eval(cur_t, &cord);
+        valarray<float> cur_norm = {0,0,0};
+        cur_object->get_normal(cord, &cur_norm);
+        shader.phong(cord, cur_norm, view, &cur_color, &cur_object->material);
+        valarray<float> reflect = {0.0,0.0,0.0};
+        reflectance(-1 * ray.direction, cur_norm, &reflect);
+        Ray new_ray = Ray(cord, reflect);
+        reflectance_harshil(new_ray, &next_color, (depth - 1.0));
+        cur_color.add_color(next_color);
+    }
+    *c = cur_color;
     
 }
 
