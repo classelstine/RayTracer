@@ -281,9 +281,46 @@ Func_Sphere::Func_Sphere(valarray<float> c, float r, Material m) {
     material = m;
 }
 
-void Func_Sphere::dist(valarray<float> point, float*d) {
-    float dist_to_center = sqrt(pow((point - center), 2).sum());
+// If you want a transformation, you must change p before passing into this function. 
+void Func_Sphere::dist(valarray<float> p, float*d) {
+    // This part implements an ellipse.
+    /* 
+    float r = sqrt(pow(p[0], 2) + pow(p[1], 2));
+    p[0] = p[0]/(1.0 - 0.2 * r);
+    */
+    // This part makes a grid of spheres.
+     
+    p[0] = 2.0 * ((p[0]/2.0) - floor((p[0]/2.0) + (1.0/2.0)));
+    p[1] = 2.0 * ((p[1]/2.0) - floor((p[1]/2.0) + (1.0/2.0)));
+
+    //p[2] = 2.0 * ((p[2]/2.0) - floor((p[2]/2.0) + (1.0/2.0)));
+    
+    // THIS IS THE MOST BASIC FORM OF A SPHERE
+    
+    float dist_to_center = sqrt(pow((p - center), 2).sum());
     *d = dist_to_center - radius;
+    
+    /*
+    valarray<float> c2 = {-3.0, 0.0, 5.0};
+    valarray<float> c3 = {0.0, 3.0, 5.0};
+    float dtc1 = sqrt(pow((p - center), 2).sum());
+    float dtc2 = sqrt(pow((p - c2), 2).sum());
+    float dtc3 = sqrt(pow((p - c3), 2).sum()); 
+    float d1 = dtc1 - radius;
+    float d2 = dtc2 - 0.5;
+    float d3 = dtc3 - 0.5;
+    *d = d3;
+    *d = min(d1, d3);
+    *d = min(min(d1, d2), d3);
+    */
+    /*
+    valarray<float> c2 = { -2.0, -2.0, 20.0};
+    float dtc1 = sqrt(pow((p - center), 2).sum());
+    float dtc2 = sqrt(pow((p - c2), 2).sum());
+    float d1 = dtc1 - radius;
+    float d2 = dtc2 - 0.5;
+    *d = min(d1, d2);
+    */
 }
 
 bool Func_Sphere::t_hit(Ray ray, float* t) {
@@ -306,9 +343,28 @@ bool Func_Sphere::t_hit(Ray ray, float* t) {
 }
 
 void Func_Sphere::get_normal(valarray<float> point, valarray<float>* normal) {
+    /*
     valarray<float> n = point - center;
     normalize(&n);
     normal->swap(n);
+    */
+    valarray<float> n = {0.0,0.0,0.0};
+    valarray<float> e1 = {0.01, 0.0, 0.0};
+    valarray<float> e2 = {0.0, 0.01, 0.0};
+    valarray<float> e3 = {0.0, 0.0, 0.01};
+    float a, b, c, d, e, f;
+    dist(point + e1, &a);
+    dist(point - e1, &b);
+    dist(point + e2, &c);
+    dist(point - e2, &d);
+    dist(point + e3, &e);
+    dist(point - e3, &f);
+    n[0] = a - b;
+    n[1] = c - d;
+    n[2] = e - f;
+    normalize(&n);
+    normal->swap(n);
+
 }
 
 
@@ -430,7 +486,7 @@ Shader::Shader(void) {
     Color color(1.0, 1.0, 1.0);
     Light light1 = Light(p1, color, false);
     */
-    valarray<float> p1 = {0.0, 0.0, 0.0};
+    valarray<float> p1 = {-10.0, -10.0, 0.0};
     valarray<float> p2 = {0, 20, 0};
     valarray<float> d = {-1, -1, 1};
     Color white(1.0, 1.0, 1.0);
@@ -497,7 +553,7 @@ class Camera {
 
 Camera::Camera(void) {
     eye_pos.resize(3);
-    eye_pos = {0,0,-1};
+    eye_pos = {0,0,-1.5};
 }
 
 /*

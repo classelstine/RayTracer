@@ -33,8 +33,9 @@ valarray<float> p1 = {-1, -1, 10};
 valarray<float> p2 = {0, 1, 10};
 valarray<float> p3 = {1, -1, 10};
 Triangle* t1 = new Triangle(p1, p2, p3, m1);
-Func_Sphere* fs1 = new Func_Sphere(c1, 4.0, m1);
-vector<Object*> objects = {fs1};
+Func_Sphere* fs1 = new Func_Sphere(c1, 1.0, m1);
+Func_Sphere* fs2 = new Func_Sphere(c1, 1.0, m1);
+vector<Object*> objects = {fs2};
 
 void dist(valarray<float> p1, valarray<float> p2, float* d);
 /*
@@ -247,11 +248,14 @@ bool Triangle::t_hit(Ray ray, float *t) {
  *
  */
 
-bool shaddow_hit(Light light, valarray<float> point) {
-    float epsilon = 0.00001;
+bool shadow_hit(Light light, valarray<float> point) {
+    float epsilon = 0.1;
     valarray<float> light_dir = {0.0,0.0,0.0};
     light.light_vector(point, &light_dir);
     Ray s = Ray(point, light_dir);
+    // ONLY WORKS FOR POINT LIGHT
+    valarray<float> l_p = -1 * light_dir;
+    Ray light_ray = Ray(light.xyz, l_p);
     float t = 0.0;
     bool light_hit = true;
     float light_t = numeric_limits<float>::max();
@@ -259,18 +263,33 @@ bool shaddow_hit(Light light, valarray<float> point) {
         dist(light.xyz, point, &light_t);
     }
     for (Object* obj : objects) {
+        if(obj->t_hit(light_ray, &t)) {
+            valarray<float> cord;
+            light_ray.eval(t, &cord);
+            float norm = sqrt(pow((cord-point), 2).sum());
+            if (norm > epsilon) {
+                light_hit = false;
+                //cout << "shadow ray hit" << endl;
+            }
+        }
+            
+    }
+    /*
+    for (Object* obj : objects) {
         if(obj->t_hit(s, &t)) {
             if (t < light_t && t > epsilon) {
-               // light_hit = false;
-               /*
+               light_hit = false;
+               
                 cout << "SHADOW RAY HIT"<< endl;
+                
                 cout << "POINT: " << point[0] << "," << point[1] << "," << point[2] << endl;
                 cout << "s:" << s.direction[0] << "," << s.direction[1] << "," << s.direction[2] << endl; 
                 cout << "t:" << t << " light_t = " << light_t << endl;
-                */
+            
             }
         }
     }
+    */
     return light_hit;
 }
 
@@ -281,7 +300,7 @@ void Shader::phong(valarray<float> point, valarray<float> normal, valarray<float
     Color ambient = Color(0.0, 0.0, 0.0);
     Color diffuse = Color(0.0, 0.0, 0.0);
     Color specular = Color(0.0, 0.0, 0.0);
-    if (point[2] < 10.1 && point[2] > 9.9) {
+    if (false) {
     cout << " CURRENTLY PROCESSING POINT : " << point[0] << "," << point[1] << "," << point[2] << endl;
 
     cout << "normal vector " << normal[0] << " " << normal[1] << " " << normal[2] << endl;
@@ -291,13 +310,13 @@ void Shader::phong(valarray<float> point, valarray<float> normal, valarray<float
       Light cur_light = lights[d];
       valarray<float> light_vec = {0.0,0.0,0.0};
       cur_light.light_vector(point, &light_vec);
-      if (point[2] < 10.1 && point[2] > 9.9) {
+      if (false) {
       cout << "light vector " << light_vec[0] << " " << light_vec[1] << " " << light_vec[2] << endl;
       }
       Color light_col = cur_light.color;
       valarray<float> reflect = {0.0,0.0,0.0};
       reflectance(light_vec, normal, &reflect);
-      if (point[2] < 10.1 && point[2] > 9.9) {
+      if (false) {
       cout << "reflect vector " << reflect[0] << " " << reflect[1] << " " << reflect[2] << endl;
       }
       //AMBIENT
@@ -305,7 +324,8 @@ void Shader::phong(valarray<float> point, valarray<float> normal, valarray<float
       mult_color(obj->KA, light_col, &new_ambient);
       ambient.add_color(new_ambient);
       
-      if (shaddow_hit(cur_light, point)) {
+      if (shadow_hit(cur_light, point)) {
+      //if (false) {
           //cout<< "RETURNED TRUE" << endl;
           //DIFFUSE
           Color new_diffuse = Color();
@@ -315,7 +335,7 @@ void Shader::phong(valarray<float> point, valarray<float> normal, valarray<float
           mult_color(obj->KD, light_col, &diff1);
           scale_color(positive_dot, diff1, &new_diffuse);
           diffuse.add_color(new_diffuse);
-          if (point[2] < 10.1 && point[2] > 9.9) {
+          if (false) {
           cout << "l dot n : " << l_n << endl;
           cout << "after mult by KD " << diff1.r << diff1.g << diff1.b << endl;
           cout << "after scale " << new_diffuse.r << new_diffuse.g << new_diffuse.b << endl;
@@ -324,7 +344,7 @@ void Shader::phong(valarray<float> point, valarray<float> normal, valarray<float
           Color new_specular = Color();
           Color spec1 = Color();
           float ref_view = dot(reflect, view);
-          if (point[2] < 10.1 && point[2] > 9.9) {
+          if (false) {
           cout << "dot of reflect and view: " << ref_view << endl;
           }
           float mx = max(ref_view, (float) 0.0);
@@ -338,11 +358,11 @@ void Shader::phong(valarray<float> point, valarray<float> normal, valarray<float
     }
   tmp_pixel_color.add_color(ambient); 
   tmp_pixel_color.add_color(diffuse); 
-  if (point[2] < 10.1 && point[2] > 9.9) {
+  if (false) {
   cout << "diffuse r,g,b: " << diffuse.r << " " << diffuse.g << " " << diffuse.b << endl;
   }
   tmp_pixel_color.add_color(specular); 
-  if (point[2] < 10.1 && point[2] > 9.9) {
+  if (false) {
   cout << "specular r,g,b: " << specular.r << " " << specular.g << " " << specular.b << endl;
   }
 
@@ -456,8 +476,10 @@ void Ray::eval(float t, valarray<float>* cord) {
 
 void Camera::generate_ray(valarray<float> world, Ray* r) {
     //cout << "CAMERA GENERATING RAY" << endl;
-    r->point = eye_pos;
-    r->direction = world - eye_pos; 
+    r->point = world;
+    valarray<float> d = world - eye_pos;
+    normalize(&d);
+    r->direction = d;
 }
 
 /*
