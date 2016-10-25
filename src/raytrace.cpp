@@ -7,8 +7,8 @@ Scene *scn;
 int x_resolution = 1000;
 int y_resolution = 1000;
 int samples_per_pix = 1;
-valarray<float> c1 = {0.0, 0.0, 50.0};
-Color KA = Color(0.0, 0.0, 0.0);
+valarray<float> c1 = {0.0, 0.0, 10.0};
+Color KA = Color(0.5, 0.5, 0.0);
 //Color KA = Color(0.0, 0.0, 0.0);
 Color KD = Color(0.5, 0.5, 0.0);
 //Color KD = Color(0.0, 0.0, 0.0);
@@ -26,14 +26,15 @@ float SPU1 = 2;
 float SPV1 = 2;
 Material m1 = Material(KA, KD, KS, SPU, SPV);
 Material m2 = Material(KA1, KD1, KS1, SPU1, SPV1);
-Sphere* s1 = new Sphere(c1, 10.0, m1); 
+Sphere* s1 = new Sphere(c1, 4.0, m1); 
 Sphere* s2 = new Sphere(c2, 1.0, m2); 
 //Object* objects[] = {s1,s2};
 valarray<float> p1 = {-1, -1, 10};
 valarray<float> p2 = {0, 1, 10};
 valarray<float> p3 = {1, -1, 10};
 Triangle* t1 = new Triangle(p1, p2, p3, m1);
-vector<Object*> objects = {s1};
+Func_Sphere* fs1 = new Func_Sphere(c1, 4.0, m1);
+vector<Object*> objects = {fs1};
 
 void dist(valarray<float> p1, valarray<float> p2, float* d);
 /*
@@ -280,24 +281,25 @@ void Shader::phong(valarray<float> point, valarray<float> normal, valarray<float
     Color ambient = Color(0.0, 0.0, 0.0);
     Color diffuse = Color(0.0, 0.0, 0.0);
     Color specular = Color(0.0, 0.0, 0.0);
-    //cout << " CURRENTLY PROCESSING POINT : " << point[0] << "," << point[1] << "," << point[2] << endl;
-    /*
-    cout << "r: " << obj->KA.r << obj->KA.g <<endl;
-    cout << obj->KA.g << endl;
-    cout << obj->KA.b << endl;
-    */
-    //cout << "normal vector " << normal[0] << " " << normal[1] << " " << normal[2] << endl;
-    //cout << "view vector " << view[0] << " " << view[1] << " " << view[2] << endl;
+    if (point[2] < 10.1 && point[2] > 9.9) {
+    cout << " CURRENTLY PROCESSING POINT : " << point[0] << "," << point[1] << "," << point[2] << endl;
 
+    cout << "normal vector " << normal[0] << " " << normal[1] << " " << normal[2] << endl;
+    cout << "view vector " << view[0] << " " << view[1] << " " << view[2] << endl;
+    }
     for(int d = 0; d < lights.size(); d++) {
       Light cur_light = lights[d];
       valarray<float> light_vec = {0.0,0.0,0.0};
       cur_light.light_vector(point, &light_vec);
-      //cout << "light vector " << light_vec[0] << " " << light_vec[1] << " " << light_vec[2] << endl;
+      if (point[2] < 10.1 && point[2] > 9.9) {
+      cout << "light vector " << light_vec[0] << " " << light_vec[1] << " " << light_vec[2] << endl;
+      }
       Color light_col = cur_light.color;
       valarray<float> reflect = {0.0,0.0,0.0};
       reflectance(light_vec, normal, &reflect);
-      //cout << "reflect vector " << reflect[0] << " " << reflect[1] << " " << reflect[2] << endl;
+      if (point[2] < 10.1 && point[2] > 9.9) {
+      cout << "reflect vector " << reflect[0] << " " << reflect[1] << " " << reflect[2] << endl;
+      }
       //AMBIENT
       Color new_ambient = Color();
       mult_color(obj->KA, light_col, &new_ambient);
@@ -313,24 +315,36 @@ void Shader::phong(valarray<float> point, valarray<float> normal, valarray<float
           mult_color(obj->KD, light_col, &diff1);
           scale_color(positive_dot, diff1, &new_diffuse);
           diffuse.add_color(new_diffuse);
+          if (point[2] < 10.1 && point[2] > 9.9) {
+          cout << "l dot n : " << l_n << endl;
+          cout << "after mult by KD " << diff1.r << diff1.g << diff1.b << endl;
+          cout << "after scale " << new_diffuse.r << new_diffuse.g << new_diffuse.b << endl;
+          }
           //SPECULAR 
           Color new_specular = Color();
           Color spec1 = Color();
           float ref_view = dot(reflect, view);
-          //cout << "dot of reflect and view: " << ref_view << endl;
+          if (point[2] < 10.1 && point[2] > 9.9) {
+          cout << "dot of reflect and view: " << ref_view << endl;
+          }
           float mx = max(ref_view, (float) 0.0);
           float power = find_specular_power(normal, view, light_vec, obj);
           float tmp = pow(mx, power);
           scale_color(tmp, obj->KS, &spec1);
           mult_color(spec1, light_col, &new_specular);
           specular.add_color(new_specular);
+
       }
     }
   tmp_pixel_color.add_color(ambient); 
   tmp_pixel_color.add_color(diffuse); 
-  //cout << "diffuse r,g,b: " << diffuse.r << " " << diffuse.g << " " << diffuse.b << endl;
+  if (point[2] < 10.1 && point[2] > 9.9) {
+  cout << "diffuse r,g,b: " << diffuse.r << " " << diffuse.g << " " << diffuse.b << endl;
+  }
   tmp_pixel_color.add_color(specular); 
-  //cout << "specular r,g,b: " << specular.r << " " << specular.g << " " << specular.b << endl;
+  if (point[2] < 10.1 && point[2] > 9.9) {
+  cout << "specular r,g,b: " << specular.r << " " << specular.g << " " << specular.b << endl;
+  }
 
   c->r = min(tmp_pixel_color.r, (float) 1.0);
   c->g = min(tmp_pixel_color.g, (float) 1.0);
@@ -403,7 +417,7 @@ void Raytracer::trace(Ray r, Color *c) {
             r.eval(t, &cord);
             valarray<float> cur_norm = {0.0,0.0,0.0};
             cur_object->get_normal(cord, &cur_norm);
-            cout << "point to be shaded: " << cord[0] << "," << cord[1] << "," << cord[2] << endl;
+            //cout << "point to be shaded: " << cord[0] << "," << cord[1] << "," << cord[2] << endl;
             shader.phong(cord, cur_norm, view, c, &cur_object->material);    
         }
     }

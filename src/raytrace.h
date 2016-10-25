@@ -265,6 +265,54 @@ class Object {
 void Object::get_normal(valarray<float> point, valarray<float>* normal) {
 }
 
+class Func_Sphere: public Object {
+    public:
+        Func_Sphere(valarray<float> c, float r, Material);
+        bool t_hit(Ray ray, float* t);
+        void get_normal(valarray<float> point, valarray<float>* normal);
+        void dist(valarray<float> point, float *d);
+        valarray<float> center;
+        float radius;    
+};
+
+Func_Sphere::Func_Sphere(valarray<float> c, float r, Material m) {
+    center = c;
+    radius = r;
+    material = m;
+}
+
+void Func_Sphere::dist(valarray<float> point, float*d) {
+    float dist_to_center = sqrt(pow((point - center), 2).sum());
+    *d = dist_to_center - radius;
+}
+
+bool Func_Sphere::t_hit(Ray ray, float* t) {
+    float epsilon = 0.01;
+    float cur_t = 0;
+    valarray<float> cur_pt = {0.0, 0.0, 0.0};
+    float d = 1000;
+    float max_val = 1000;
+    while(cur_t < max_val) {
+        ray.eval(cur_t, &cur_pt);
+        dist(cur_pt, &d);
+        if (d < epsilon) {
+            *t = cur_t;
+            return true;
+        }
+        cur_t = cur_t + d;
+    }
+    return false;
+
+}
+
+void Func_Sphere::get_normal(valarray<float> point, valarray<float>* normal) {
+    valarray<float> n = point - center;
+    normalize(&n);
+    normal->swap(n);
+}
+
+
+
 class Sphere: public Object {
     public:
         Sphere(valarray<float> c, float r, Material);
