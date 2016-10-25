@@ -285,6 +285,7 @@ Func_Sphere::Func_Sphere(valarray<float> c, float r, Material m) {
     radius = r;
     material = m;
 }
+    
 
 // If you want a transformation, you must change p before passing into this function. 
 void Func_Sphere::dist(valarray<float> p, float*d) {
@@ -294,18 +295,20 @@ void Func_Sphere::dist(valarray<float> p, float*d) {
     p[0] = p[0]/(1.0 - 0.2 * r);
     */
     // This part makes a grid of spheres.
-     
+    /* 
     p[0] = 2.0 * ((p[0]/2.0) - floor((p[0]/2.0) + (1.0/2.0)));
     p[1] = 2.0 * ((p[1]/2.0) - floor((p[1]/2.0) + (1.0/2.0)));
-
+    */
     //p[2] = 2.0 * ((p[2]/2.0) - floor((p[2]/2.0) + (1.0/2.0)));
     
     // THIS IS THE MOST BASIC FORM OF A SPHERE
-    
+    /*
     float dist_to_center = sqrt(pow((p - center), 2).sum());
     *d = dist_to_center - radius;
-    
-    /*
+    */
+
+    // THIS IS MULTIPLE SPHERES
+    /*  
     valarray<float> c2 = {-3.0, 0.0, 5.0};
     valarray<float> c3 = {0.0, 3.0, 5.0};
     float dtc1 = sqrt(pow((p - center), 2).sum());
@@ -318,6 +321,7 @@ void Func_Sphere::dist(valarray<float> p, float*d) {
     *d = min(d1, d3);
     *d = min(min(d1, d2), d3);
     */
+    // THIS IS MULTIPLE SPHERES
     /*
     valarray<float> c2 = { -2.0, -2.0, 20.0};
     float dtc1 = sqrt(pow((p - center), 2).sum());
@@ -326,6 +330,12 @@ void Func_Sphere::dist(valarray<float> p, float*d) {
     float d2 = dtc2 - 0.5;
     *d = min(d1, d2);
     */
+
+    // THIS IS A PLANE AND A SPHERE
+
+    float dist_to_center = sqrt(pow((p - center), 2).sum());
+    float plane = 3.0 - p[0];
+    *d = min(dist_to_center - radius, plane);
 }
 
 bool Func_Sphere::t_hit(Ray ray, float* t) {

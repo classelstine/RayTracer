@@ -4,16 +4,17 @@
 
 using namespace std;
 Scene *scn;
-int x_resolution = 1000;
-int y_resolution = 1000;
-int samples_per_pix = 1;
-float max_recursive_depth;
+int x_resolution = 100;
+int y_resolution = 100;
+int samples_per_pix = 0;
+float max_recursive_depth = 1;
+float reflectivity = 0.75;
 valarray<float> c1 = {0.0, 0.0, 10.0};
-Color KA = Color(0.5, 0.5, 0.0);
+Color KA = Color(0.4, 0.4, 0.4);
 //Color KA = Color(0.0, 0.0, 0.0);
-Color KD = Color(0.5, 0.5, 0.0);
+Color KD = Color(0.3, 0.3, 0.0);
 //Color KD = Color(0.0, 0.0, 0.0);
-Color KS = Color(0.5, 0.5, 0.0);
+Color KS = Color(0.3, 0.3, 0.0);
 //Color KS = Color(0.0, 0.0, 0.0);
 float SPU = 2;
 float SPV = 2;
@@ -56,10 +57,10 @@ Film::Film(int x_res, int y_res, int sr) {
 }
 
 Film::Film(void) {
-    res_x = 1000;
-    res_y = 1000;
+    res_x = x_resolution;
+    res_y = y_resolution;
     sample_rate = 1;
-    pixel_buckets = vector<vector<vector<Color>>> (1000, vector<vector<Color>>(1000, vector<Color>(1, Color(0,0,0))));
+    pixel_buckets = vector<vector<vector<Color>>> (x_resolution, vector<vector<Color>>(y_resolution, vector<Color>(samples_per_pix, Color(0,0,0))));
 }
 
 // Averages over each pixel bucks and writes the result to a screen
@@ -82,14 +83,17 @@ void Film::write_image(void) {
             if (cur_color.r > 1) {
                 cout << "red bigger" << endl;
                 cout << cur_color.r << endl;
+                cur_color.r = 1.0;
             } 
             if (cur_color.g > 1) {
                 cout << "green bigger" << endl;
                 cout << cur_color.g << endl;
+                cur_color.g = 1.0;
             } 
             if (cur_color.b > 1) {
                 cout << "blue bigger" << endl;
                 cout << cur_color.b << endl;
+                cur_color.b = 1.0;
             } 
             avg_pixels[cur_index] = cur_color.r * 255;
             avg_pixels[cur_index+1] = cur_color.g * 255;
@@ -127,8 +131,8 @@ void Film::commit(Sample s, Color c) {
 Sampler::Sampler(void) {
     current_px = 0;
     current_py = 0;
-    max_x = 999;
-    max_y = 999;
+    max_x = 599;
+    max_y = 599;
 }
 
 Sampler::Sampler(int x_res, int y_res) {
@@ -432,55 +436,60 @@ void Raytracer::trace(Ray r, Color *c) {
             r.eval(t, &cord);
             valarray<float> cur_norm = {0.0,0.0,0.0};
             cur_object->get_normal(cord, &cur_norm);
-            //cout << "point to be shaded: " << cord[0] << "," << cord[1] << "," << cord[2] << endl;
             shader.phong(cord, cur_norm, view, c, &cur_object->material);
-            valarray<float> reflect = {0.0,0.0,0.0};
-            reflectance(-1 * r.direction , cur_norm, &reflect);
-            Ray new_ray = Ray(cord, reflect);
-            reflectance_harshil(new_ray, &next_color, 0);
+            if (c->r + c->g + c->b != 0) {
+                valarray<float> reflect = {0.0,0.0,0.0};
+                reflectance(-1 * r.direction , cur_norm, &reflect);
+                Ray new_ray = Ray(cord, reflect);
+                reflectance_harshil(new_ray, &next_color, 0);
+            }
+            c->add_color(next_color);
         }
     }
 }
 
 void Raytracer::reflectance_harshil(Ray ray, Color *c, float depth) {
     if (depth >= max_recursive_depth) {
-        *c = Color(0.0, 0.0, 0.0);
-    }
-    valarray<float> view = -1 * ray.direction;
-    Color next_color = Color();
-    Color cur_color = Color();
-    Object* cur_object = objects[0];
-    float epsilon = 0.01;
-    float max_val = 1000;
-    valarray<float> cur_pt = {0.0,0.0,0.0};
-    float step_size = 0.01;
-    float cur_t = 0;
-    float d = 0;
-    float prev_d = 0;
-    bool decreasing = true;
-    while(cur_t < max_val && decreasing) {
-        ray.eval(cur_t, &cur_pt);
-        cur_object->dist(cur_pt, &d);
-        if (d < prev_d) {
-            decreasing = false;          
+        *c = Color(0.0,0.0,0.0);
+    } else {
+        valarray<float> view = -1 * ray.direction;
+        Color next_color = Color(0.0,0.0,0.0);
+        Color cur_color = Color(0.0,0.0,0.0);
+        Object* cur_object = objects[0];
+        float epsilon = 0.01;
+        float max_val = 1000;
+        valarray<float> cur_pt = {0.0,0.0,0.0};
+        float step_size = 0.1;
+        float cur_t = 0;
+        float d = 0;
+        float prev_d = 0;
+        bool decreasing = true;
+        while(cur_t < max_val && decreasing) {
+            ray.eval(cur_t, &cur_pt);
+            cur_object->dist(cur_pt, &d);
+            if (d < prev_d) {
+                decreasing = false;          
+            }
+            prev_d = d;
+            cur_t = cur_t + step_size;
         }
-        prev_d = d;
-        cur_t = cur_t + step_size;
+        Ray r = Ray(cur_pt, ray.direction);
+        if (cur_object->t_hit(r, &cur_t)) {
+            valarray<float> cord = {0,0,0};
+            r.eval(cur_t, &cord);
+            valarray<float> cur_norm = {0,0,0};
+            cur_object->get_normal(cord, &cur_norm);
+            shader.phong(cord, cur_norm, view, &cur_color, &cur_object->material);
+            valarray<float> reflect = {0.0,0.0,0.0};
+            reflectance(-1 * ray.direction, cur_norm, &reflect);
+            Ray new_ray = Ray(cord, reflect);
+            reflectance_harshil(new_ray, &next_color, (depth + 1.0));
+            cur_color.add_color(next_color);
+        }
+        c->r = cur_color.r * reflectivity;
+        c->g = cur_color.g * reflectivity;
+        c->b = cur_color.b * reflectivity;
     }
-    Ray r = Ray(cur_pt, ray.direction);
-    if (cur_object->t_hit(r, &cur_t)) {
-        valarray<float> cord = {0,0,0};
-        r.eval(cur_t, &cord);
-        valarray<float> cur_norm = {0,0,0};
-        cur_object->get_normal(cord, &cur_norm);
-        shader.phong(cord, cur_norm, view, &cur_color, &cur_object->material);
-        valarray<float> reflect = {0.0,0.0,0.0};
-        reflectance(-1 * ray.direction, cur_norm, &reflect);
-        Ray new_ray = Ray(cord, reflect);
-        reflectance_harshil(new_ray, &next_color, (depth - 1.0));
-        cur_color.add_color(next_color);
-    }
-    *c = cur_color;
     
 }
 
@@ -562,7 +571,7 @@ void Scene::render(void) {
         Color color = Color();
         raytracer.trace(ray, &color);
         film.commit(sample, color);
-        //cout << "SAMPLE (u,v): " << sample.x << ", " << sample.y << endl;
+        //cout << "Completed SAMPLE (u,v): " << sample.x << ", " << sample.y << endl;
         //cout << "WORLD COORD (x,y,z): " << world_cord[0] << "," << world_cord[1] << "," << world_cord[2] << endl;
         //cout << "Ray Direction: "<< ray.direction[0] << "," << ray.direction[1] << "," << ray.direction[2] << endl;
     }
