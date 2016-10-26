@@ -297,7 +297,6 @@ void Func_Sphere::scale(float x, float y, float z, valarray<float> world, valarr
     *obj = {world[0]/x, world[1]/y, world[2]/z};    
 }
 
-
 void Func_Sphere::rotate(float x, float y, float z, float radians, valarray<float> world, valarray<float> *obj) {
     valarray<float> axis = {x, y, z};
     normalize(&axis);
@@ -314,6 +313,8 @@ void Func_Sphere::rotate(float x, float y, float z, float radians, valarray<floa
 
     *obj = { (row1*world).sum(), (row2*world).sum(), (row3*world).sum()};    
 }
+
+
 
 // If you want a transformation, you must change p before passing into this function. 
 void Func_Sphere::dist(valarray<float> p, float*d) {
@@ -366,7 +367,7 @@ void Func_Sphere::dist(valarray<float> p, float*d) {
     *d = min(dist_to_center - radius, plane);
     */
 
-    // THIS IS A TRANSLATIONA
+    // THIS IS A TRANSLATION
     /*
     valarray<float> obj_point = {0,0,0};
     translate(0, 0, 20, p, &obj_point);
@@ -375,8 +376,8 @@ void Func_Sphere::dist(valarray<float> p, float*d) {
     *d = min(dist_to_center - radius, plane);
     */
 
-    // THIS IS A SCALING
-    
+    // THIS IS A LINEAR TRANSLATION
+    /*
     valarray<float> obj_point = {0,0,0};
     scale(2, 3, 1, p, &obj_point);
     rotate(0,0,1,PI/4, obj_point, &obj_point);
@@ -384,6 +385,16 @@ void Func_Sphere::dist(valarray<float> p, float*d) {
     float dist_to_center = sqrt(pow((obj_point), 2).sum());
     float plane = 3.0 - obj_point[0];
     *d = min(dist_to_center - radius, plane);
+    */
+
+    // THIS IS A SUPERQUADRIC
+    float r = 0.5;
+    float s = 0.5;
+    float t = 0.5;
+    valarray<float> obj_point = {0,0,0};
+    rotate(0.0,0,1.0,PI/6,p,&obj_point);
+    translate(0,0,10,obj_point,&obj_point);
+    *d = (-1) *(1.0 - pow(abs(obj_point[0]),r) - pow(abs(obj_point[1]), s)- pow(abs(obj_point[2]), t));
 
 }
 

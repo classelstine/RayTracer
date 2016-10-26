@@ -4,15 +4,17 @@
 
 using namespace std;
 Scene *scn;
-int x_resolution = 100;
-int y_resolution = 100;
+int x_resolution = 1000;
+int y_resolution = 1000;
 int samples_per_pix = 0;
 float max_recursive_depth = 0;
 float reflectivity = 0.75;
+Color sky = Color(70.0/255.0, 130.0/255.0, 180/255.0);
+Color good_ambient = Color( 119.0/255.0,  139.0/255.0, 165.0/255.0);
 valarray<float> c1 = {0.0, 3.0, 10.0};
-Color KA = Color(0.4, 0.4, 0.4);
+Color KA = Color(0.5, 0.5, 0.5);
 //Color KA = Color(0.0, 0.0, 0.0);
-Color KD = Color(0.3, 0.3, 0.0);
+Color KD = Color(0.0, 0.3, 0.);
 //Color KD = Color(0.0, 0.0, 0.0);
 Color KS = Color(0.3, 0.3, 0.0);
 //Color KS = Color(0.0, 0.0, 0.0);
@@ -368,6 +370,11 @@ void Shader::phong(valarray<float> point, valarray<float> normal, valarray<float
   c->r = min(tmp_pixel_color.r, (float) 1.0);
   c->g = min(tmp_pixel_color.g, (float) 1.0);
   c->b = min(tmp_pixel_color.b, (float) 1.0);
+  if (c->r + c->g + c->b <= 0.01) {
+    c->r = sky.r;
+    c->g = sky.g;
+    c->b = sky.b;
+  }
 }
 
 void reflectance(valarray<float> light_source, valarray<float> normal, valarray<float> *reflectance) { 
