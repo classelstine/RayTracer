@@ -324,17 +324,18 @@ void Func_Sphere::dist(valarray<float> p, float*d) {
     p[0] = p[0]/(1.0 - 0.2 * r);
     */
     // This part makes a grid of spheres.
-    /* 
+
     p[0] = 2.0 * ((p[0]/2.0) - floor((p[0]/2.0) + (1.0/2.0)));
     p[1] = 2.0 * ((p[1]/2.0) - floor((p[1]/2.0) + (1.0/2.0)));
-    */
-    //p[2] = 2.0 * ((p[2]/2.0) - floor((p[2]/2.0) + (1.0/2.0)));
+    p[2] = 2.0 * ((p[2]/2.0) - floor((p[2]/2.0) + (1.0/2.0)));
     
     // THIS IS THE MOST BASIC FORM OF A SPHERE
-    /*
-    float dist_to_center = sqrt(pow((p - center), 2).sum());
-    *d = dist_to_center - radius;
-    */
+    
+    float dist_to_center = sqrt(pow((p), 2).sum());
+    float inf_spheres = (-1) * (dist_to_center - radius);
+    float plane = 3.0  - p[2];
+    *d = max(plane, inf_spheres);
+    
 
     // THIS IS MULTIPLE SPHERES
     /*  
@@ -361,11 +362,13 @@ void Func_Sphere::dist(valarray<float> p, float*d) {
     */
 
     // THIS IS A PLANE AND A SPHERE
-    /* 
-    float dist_to_center = sqrt(pow((p - center), 2).sum());
+    /*
+    float dist_to_center = sqrt(pow((p - center), 2).sum()); 
     float plane = 3.0 - p[0];
     *d = min(dist_to_center - radius, plane);
     */
+
+
 
     // THIS IS A TRANSLATION
     /*
@@ -388,6 +391,7 @@ void Func_Sphere::dist(valarray<float> p, float*d) {
     */
 
     // THIS IS A SUPERQUADRIC
+    /*
     float r = 0.5;
     float s = 0.5;
     float t = 0.5;
@@ -395,6 +399,7 @@ void Func_Sphere::dist(valarray<float> p, float*d) {
     rotate(0.0,0,1.0,PI/6,p,&obj_point);
     translate(0,0,10,obj_point,&obj_point);
     *d = (-1) *(1.0 - pow(abs(obj_point[0]),r) - pow(abs(obj_point[1]), s)- pow(abs(obj_point[2]), t));
+    */
 
 }
 
@@ -561,7 +566,7 @@ Shader::Shader(void) {
     Color color(1.0, 1.0, 1.0);
     Light light1 = Light(p1, color, false);
     */
-    valarray<float> p1 = {-10.0, -10.0, 0.0};
+    valarray<float> p1 = {0.0, 0.0, 0.0};
     valarray<float> p2 = {0, 20, 0};
     valarray<float> d = {-1, -1, 1};
     Color white(1.0, 1.0, 1.0);
