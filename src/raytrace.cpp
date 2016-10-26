@@ -6,8 +6,8 @@ using namespace std;
 Scene *scn;
 bool camera_set = false; 
 bool obj_parsed = false;
-int x_resolution = 3000;
-int y_resolution = 3000;
+int x_resolution = 100;
+int y_resolution = 100;
 int samples_per_pix = 0;
 float max_recursive_depth = 0;
 float reflectivity = 0.75;
@@ -73,7 +73,7 @@ Film::Film(int x_res, int y_res, int sr) {
 Film::Film(void) {
     res_x = x_resolution;
     res_y = y_resolution;
-    sample_rate = 1;
+    sample_rate = samples_per_pix;;
     pixel_buckets = vector<vector<vector<Color>>> (x_resolution, vector<vector<Color>>(y_resolution, vector<Color>(samples_per_pix, Color(0,0,0))));
 }
 
@@ -188,7 +188,9 @@ bool Sampler::get_sample(Sample *sample){
 bool Sphere::t_hit(Ray ray, float* t) {
     //cout<< "in sphere t_hit" << endl;
     valarray<float> d = ray.direction;
+    world_to_obj(d, &d);
     valarray<float> e = ray.point;
+    world_to_obj(e, &e);
     float discriminant = pow(dot(d,(e - center)), 2) - (dot(d, d)) * (dot(e - center, e - center) - pow(radius, 2));
     if(discriminant < 0.0) {
         *t = -1;
@@ -213,7 +215,10 @@ bool Sphere::t_hit(Ray ray, float* t) {
 // BETA and GAMMA satisfying:
 // RAY(t) = ONE + BETA * TWO + GAMMA * THREE
 bool Triangle::t_hit(Ray ray, float *t) {
-    
+    valarray<float> r1 = ray.point;
+    world_to_obj(r1, &r1);
+    valarray<float> r2 = ray.direction;
+    world_to_obj(r2, &r2); 
     float a = p1[0] - p2[0];
     float b = p1[1] - p2[1];
     float c = p1[2] - p2[2];
@@ -222,13 +227,13 @@ bool Triangle::t_hit(Ray ray, float *t) {
     float e = p1[1] - p3[1];
     float f = p1[2] - p3[2];
 
-    float g = ray.direction[0];
-    float h = ray.direction[1];
-    float i = ray.direction[2];
+    float g = r2[0];
+    float h = r2[1];
+    float i = r2[2];
 
-    float j = p1[0] - ray.point[0];
-    float k = p1[1] - ray.point[1];
-    float l = p1[2] - ray.point[2];
+    float j = p1[0] - r2[0];
+    float k = p1[1] - r2[1];
+    float l = p1[2] - r2[2];
 
     float ei = e*i;
     float hf = h*f;
@@ -262,47 +267,35 @@ bool Triangle::t_hit(Ray ray, float *t) {
 
 bool shadow_hit(Light light, valarray<float> point) {
     float epsilon = 0.1;
+    float max_t = 1000;
     valarray<float> light_dir = {0.0,0.0,0.0};
     light.light_vector(point, &light_dir);
     Ray s = Ray(point, light_dir);
     // ONLY WORKS FOR POINT LIGHT
     valarray<float> l_p = -1 * light_dir;
     Ray light_ray = Ray(light.xyz, l_p);
+    if(light.is_direct) {
+        valarray<float> inf_pt = {0.0,0.0,0.0};
+        s.eval(max_t, &inf_pt);
+        light_ray = Ray(inf_pt, l_p);
+    }
     float t = 0.0;
     bool light_hit = true;
-    float light_t = numeric_limits<float>::max();
-    if (!light.is_direct) {
-        dist(light.xyz, point, &light_t);
-    }
+    float light_t = sqrt(pow((light_ray.point-point), 2).sum());
     for (Object* obj : objects) {
         if(obj->t_hit(light_ray, &t)) {
-            valarray<float> cord;
-            light_ray.eval(t, &cord);
-            float norm = sqrt(pow((cord-point), 2).sum());
-            // need to change this so you only make it false if you found something CLOSER to the light
-            if (norm > epsilon) {
-                light_hit = false;
-                //cout << "shadow ray hit" << endl;
+            if (abs(t - light_t) < epsilon) {
+                valarray<float> cord = {0.0,0.0,0.0};;
+                light_ray.eval(t, &cord);
+                float norm = sqrt(pow((cord-point), 2).sum());
+                if (norm > epsilon) {
+                    light_hit = false;
+                    //cout << "shadow ray hit" << endl;
+                }
             }
         }
             
     }
-    /*
-    for (Object* obj : objects) {
-        if(obj->t_hit(s, &t)) {
-            if (t < light_t && t > epsilon) {
-               light_hit = false;
-               
-                cout << "SHADOW RAY HIT"<< endl;
-                
-                cout << "POINT: " << point[0] << "," << point[1] << "," << point[2] << endl;
-                cout << "s:" << s.direction[0] << "," << s.direction[1] << "," << s.direction[2] << endl; 
-                cout << "t:" << t << " light_t = " << light_t << endl;
-            
-            }
-        }
-    }
-    */
     return light_hit;
 }
 
@@ -632,15 +625,22 @@ bool loadOBJ(char *path, Material input_material) {
         } 
         else if ( strcmp( lineHeader, "f" ) == 0 ) {
             int v1,v2,v3;
-            int matches = fscanf(file, "%d/%d/%d\n", &v1, &v2, &v3);
+            int matches = fscanf(file, "%d %d %d\n", &v1, &v2, &v3);
             if (matches != 3){
                 printf("File can't be read by our simple parser : ( Try exporting with other options\n");
                 return false;
             }
+            cout << "Triangle attempt" << endl;
+            v1 = v1 - 1;
+            v2 = v2 - 1;
+            v3 = v3 - 1;
             Triangle* newtri = new Triangle(temp_vertices[v1], temp_vertices[v2], temp_vertices[v3], input_material);
+            cout << "Triangle complete" << endl;
             objects.push_back(newtri);
+            return true;
         }
     }
+    cout << "OBJ DONE" << endl;
     return true;
 } 
 
@@ -663,6 +663,7 @@ int main(int argc, char *argv[]) {
     bool input_material = false; 
     Material* last_material; 
     Scene* scn = new Scene();
+    vector<valarray<float>> cur_LT = {};
     while( i + 1 <= argc ) {
         /*
          * The camera object is specified by a line of the following form:
@@ -771,15 +772,24 @@ int main(int argc, char *argv[]) {
          *      xfz
          */
         else if (strcmp(argv[i], "xfr") == 0) { 
+            valarray<float> inst = {0,(float) atof(argv[i+1]), (float) atof(argv[i+2]), (float) atof(argv[i+3])}; 
+            cur_LT.push_back(inst);
              
         } 
         else if (strcmp(argv[i], "xfs") == 0) { 
+            valarray<float> inst = {1,(float) atof(argv[i+1]), (float) atof(argv[i+2]), (float) atof(argv[i+3])}; 
+            cur_LT.push_back(inst);
+             
              
         } 
         else if (strcmp(argv[i], "xft") == 0) { 
+            valarray<float> inst = {2,(float) atof(argv[i+1]), (float) atof(argv[i+2]), (float) atof(argv[i+3])}; 
+            cur_LT.push_back(inst);
+             
              
         } 
         else if (strcmp(argv[i], "xfz") == 0) { 
+            cur_LT = {}; 
              
         } 
         /*
@@ -808,6 +818,7 @@ int main(int argc, char *argv[]) {
             valarray<float> c = {(float) atof(argv[i+1]), (float) atof(argv[i+2]), (float) atof(argv[i+3])};
             float radius = (float) atof(argv[i+4]);
             Sphere* newsphere = new Sphere(c, radius, m);
+            newsphere->lin_transform = cur_LT;
             objects.push_back(newsphere);
             i = i+4;
         } 
@@ -826,6 +837,7 @@ int main(int argc, char *argv[]) {
             valarray<float> b = {(float) atof(argv[i+4]), (float) atof(argv[i+5]), (float) atof(argv[i+6])};
             valarray<float> c = {(float) atof(argv[i+7]), (float) atof(argv[i+8]), (float) atof(argv[i+9])};
             Triangle* newtri = new Triangle(a, b, c, m);
+            newtri->lin_transform = cur_LT;
             objects.push_back(newtri);
             i = i+4;
         } 
