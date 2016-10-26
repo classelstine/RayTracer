@@ -270,7 +270,7 @@ bool Triangle::t_hit(Ray ray, float *t) {
  */
 
 bool shadow_hit(Light light, valarray<float> point) {
-    float epsilon = 0.1;
+    float epsilon = 0.001;
     float max_t = 1000;
     valarray<float> light_dir = {0.0,0.0,0.0};
     light.light_vector(point, &light_dir);
@@ -288,13 +288,13 @@ bool shadow_hit(Light light, valarray<float> point) {
     float light_t = sqrt(pow((light_ray.point-point), 2).sum());
     for (Object* obj : objects) {
         if(obj->t_hit(light_ray, &t)) {
-            if (abs(t - light_t) < epsilon) {
+            if (t < light_t) {
                 valarray<float> cord = {0.0,0.0,0.0};;
                 light_ray.eval(t, &cord);
                 float norm = sqrt(pow((cord-point), 2).sum());
                 if (norm > epsilon) {
                     light_hit = false;
-                    //cout << "shadow ray hit" << endl;
+                    cout << "shadow ray hit" << endl;
                 }
             }
         }
@@ -880,9 +880,9 @@ int main(int argc, char *argv[]) {
     Light* dl = new Light({-0.577, -0.577, 0.577}, Color(1, 1, 1), true, false);
     Light* dl2 = new Light({-0.577, 0.577, 0.577}, Color(0,0, 1), true, false);
     Light* pl2 = new Light({5, 5, 10}, Color(1,1, 1), false, false);
-    lights.push_back(pl2);
-    //lights.push_back(dl);
-    //lights.push_back(dl2);
+    //lights.push_back(pl2);
+    lights.push_back(dl);
+    lights.push_back(dl2);
 
 
     Material t_mat = Material(Color(0.1, 0.1, 0.1), Color(0.1, 0.1, 0.1), Color(1, 1, 1), Color(0, 0, 0), 50, 50);  
