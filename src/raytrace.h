@@ -255,13 +255,90 @@ Material::Material(void) {
  *  Each object has a KA, KD, KS, SPU, SPV value, which we use for shading. 
  */
 
+void translate(float x, float y, float z, valarray<float> world, valarray<float> *obj) {
+    *obj = {world[0] - x, world[1] - y, world[2] - z};    
+}
+
+void scale(float x, float y, float z, valarray<float> world, valarray<float> *obj) {
+    *obj = {world[0]/x, world[1]/y, world[2]/z};    
+}
+
+void deg_to_rad(float d, float* r) {
+    *r = (PI / 180.0) * d;
+}
+
+void rotate(float x, float y, float z, float radians, valarray<float> world, valarray<float> *obj) {
+    valarray<float> axis = {x, y, z};
+    normalize(&axis);
+    float ux = axis[0];
+    float uy = axis[1];
+    float uz = axis[2];
+
+    float c = cos(radians);
+    float s = sin(radians);
+
+    valarray<float> row1 = {c+(pow(ux, 2)*(1-c)), (ux*uy*(1-c)-uz*s), (ux*uz*(1-c)+uy*s)};
+    valarray<float> row2 = {(ux*uy*(1-c)+uz*s), c+(pow(uy, 2)*(1-c)), (uy*uz*(1-c)-ux*s)};
+    valarray<float> row3 = {(ux*uz*(1-c)-uy*s)  ,(uy*uz*(1-c)+ux*s) , c+(pow(uz, 2)*(1-c))};
+
+    *obj = { (row1*world).sum(), (row2*world).sum(), (row3*world).sum()};    
+}
+
+void exp_rotate(float x, float y, float z, valarray<float> world, valarray<float>* obj) {
+    float x_rad = 0.0;
+    float y_rad = 0.0;
+    float z_rad = 0.0;
+    deg_to_rad(x, &x_rad);
+    deg_to_rad(y, &y_rad);
+    deg_to_rad(z, &z_rad);
+    rotate(1.0, 0.0, 0.0, x_rad, world, obj);
+    rotate(0.0, 1.0, 0.0, y_rad, *obj, obj);
+    rotate(0.0, 0.0, 1.0, z_rad, *obj, obj);
+}
+
+
 class Object {
     public: 
         Material material;
+        vector<valarray<float>> lin_transform;
+        void world_to_obj(valarray<float> world, valarray<float>* obj);
         virtual void dist(valarray<float>, float*);
         virtual bool t_hit(Ray ray, float* t) { cout << "WRONG FUNCTION" << endl; return false; }
         virtual void get_normal(valarray<float> point, valarray<float>* normal);
+        //void set_translation(float, float, float);
+        //void set_rotation(float, float, float);
+        //void set_scale(float, float, float); 
 };
+/*
+void Object::set_translation(float a, float b, float c) {
+    trans = {a, b, c};
+}
+
+void Object::set_rotation(float a, float b, float c) {
+    rot = {a, b, c};
+}
+
+void Object::set_scale(float a, float b, float c) {
+    sca = {a, b, c};
+}
+*/
+
+void Object::world_to_obj(valarray<float> w, valarray<float>* o) {
+    for (valarray<float> inst : lin_transform) {
+        float i = inst[0];
+        float x = inst[1];
+        float y = inst[2];
+        float z = inst[3];
+        if (i== 0) {
+            exp_rotate(x,y,z,w,&w);
+        } else if (i == 1) {
+            scale(x,y,z,w,&w);
+        } else {
+            translate(x,y,z,w,&w);
+        }
+    }
+    *o = {w[0], w[1], w[2]};
+}
 
 void Object::dist(valarray<float> cur_pt,float* d) {
 }
@@ -279,63 +356,23 @@ class Func_Sphere: public Object {
         void dist(valarray<float> point, float *d);
         valarray<float> center;
         float radius;    
-        void translate(float, float, float, valarray<float>, valarray<float>*);
-        void scale(float, float, float, valarray<float>, valarray<float>*);
-        void rotate(float, float, float, float, valarray<float>, valarray<float>*);
-        void exp_rotate(float, float, float, valarray<float>, valarray<float>*);
+        //void translate(float, float, float, valarray<float>, valarray<float>*);
+        //void scale(float, float, float, valarray<float>, valarray<float>*);
+        //void rotate(float, float, float, float, valarray<float>, valarray<float>*);
+        //void exp_rotate(float, float, float, valarray<float>, valarray<float>*);
 };
 
 Func_Sphere::Func_Sphere(valarray<float> c, float r, Material m) {
     center = c;
     radius = r;
     material = m;
+    lin_transform = {};
 }
-
-void Func_Sphere::translate(float x, float y, float z, valarray<float> world, valarray<float> *obj) {
-    *obj = {world[0] - x, world[1] - y, world[2] - z};    
-}
-
-void Func_Sphere::scale(float x, float y, float z, valarray<float> world, valarray<float> *obj) {
-    *obj = {world[0]/x, world[1]/y, world[2]/z};    
-}
-
-void deg_to_rad(float d, float* r) {
-    *r = (PI / 180.0) * d;
-}
-
-void Func_Sphere::exp_rotate(float x, float y, float z, valarray<float> world, valarray<float>* obj) {
-    float x_rad = 0.0;
-    float y_rad = 0.0;
-    float z_rad = 0.0;
-    deg_to_rad(x, &x_rad);
-    deg_to_rad(y, &y_rad);
-    deg_to_rad(z, &z_rad);
-    rotate(1.0, 0.0, 0.0, x_rad, world, obj);
-    rotate(0.0, 1.0, 0.0, y_rad, *obj, obj);
-    rotate(0.0, 0.0, 1.0, z_rad, *obj, obj);
-}
-
-void Func_Sphere::rotate(float x, float y, float z, float radians, valarray<float> world, valarray<float> *obj) {
-    valarray<float> axis = {x, y, z};
-    normalize(&axis);
-    float ux = axis[0];
-    float uy = axis[1];
-    float uz = axis[2];
-
-    float c = cos(radians);
-    float s = sin(radians);
-
-    valarray<float> row1 = {c+(pow(ux, 2)*(1-c)), (ux*uy*(1-c)-uz*s), (ux*uz*(1-c)+uy*s)};
-    valarray<float> row2 = {(ux*uy*(1-c)+uz*s), c+(pow(uy, 2)*(1-c)), (uy*uz*(1-c)-ux*s)};
-    valarray<float> row3 = {(ux*uz*(1-c)-uy*s)  ,(uy*uz*(1-c)+ux*s) , c+(pow(uz, 2)*(1-c))};
-
-    *obj = { (row1*world).sum(), (row2*world).sum(), (row3*world).sum()};    
-}
-
 
 
 // If you want a transformation, you must change p before passing into this function. 
 void Func_Sphere::dist(valarray<float> p, float*d) {
+    world_to_obj(p, &p);
     // This part implements an ellipse.
     /* 
     float r = sqrt(pow(p[0], 2) + pow(p[1], 2));
@@ -449,6 +486,7 @@ void Func_Sphere::get_normal(valarray<float> point, valarray<float>* normal) {
     normalize(&n);
     normal->swap(n);
     */
+    world_to_obj(point, &point);
     valarray<float> n = {0.0,0.0,0.0};
     valarray<float> e1 = {0.01, 0.0, 0.0};
     valarray<float> e2 = {0.0, 0.01, 0.0};
@@ -474,6 +512,9 @@ class Sphere: public Object {
     public:
         Sphere(valarray<float> c, float r, Material);
         float radius;
+        valarray<float> trans;
+        //valarray<float> rot;
+        //valarray<float> sca;
         valarray<float> center;
         bool t_hit(Ray ray, float* t);
         virtual void get_normal(valarray<float> point, valarray<float>* normal);
@@ -483,9 +524,11 @@ Sphere::Sphere(valarray<float> c, float r, Material m) {
     radius = r;
     center = c;
     material = m;
+    lin_transform = {};
 }
 
 void Sphere::get_normal(valarray<float> p, valarray<float>* n) {
+    world_to_obj(p, &p);
     valarray<float> normal = p - center;
     normalize(&normal);
     n->swap(normal);
@@ -503,21 +546,53 @@ class Triangle : public Object {
         virtual void get_normal(valarray<float> point, valarray<float>* normal);
 };
 
+
 Triangle::Triangle(valarray<float> one, valarray<float> two, valarray<float> three, Material m) {
     material = m;
     p1 = one;
     p2 = two;
     p3 = three;
-    cout << "creating triangle" << endl;
+    lin_transform = {};
     normal = {0,0,0};
     cross(three-two, three-one, &normal);
-    cout << "cross done" << endl;
-    cout << "nomral vector " << normal[0] << " " << normal[1] << " " << normal[2] << endl;
     normalize(&normal);
-    cout << "end create triangle" << endl;
 }
 
+/*
+void Triangle::set_translation(float a, float b, float c) {
+    trans = {a, b, c};
+    translate(a, b, c, p1, &p1);
+    translate(a, b, c, p2, &p2);
+    translate(a, b, c, p3, &p3);
+    normal = {0,0,0};
+    cross(p3 - p2, p3 - p1, &normal);
+    normalize(&normal);
+}
+
+void Triangle::set_rotation(float a, float b, float c) {
+    rot = {a, b, c};
+    exp_rotate(a, b, c, p1, &p1);
+    exp_rotate(a, b, c, p2, &p2);
+    exp_rotate(a, b, c, p3, &p3);
+    normal = {0,0,0};
+    cross(p3 - p2, p3 - p1, &normal);
+    normalize(&normal);
+}
+
+void Triangle::set_scale(float a, float b, float c) {
+    sca = {a, b, c};
+    scale(a, b, c, p1, &p1);
+    scale(a, b, c, p2, &p2);
+    scale(a, b, c, p3, &p3);
+    normal = {0,0,0};
+    cross(p3 - p2, p3 - p1, &normal);
+    normalize(&normal);
+}
+*/
+
+
 void Triangle::get_normal(valarray<float> p, valarray<float>* n) {
+    world_to_obj(p, &p);
     *n = {normal[0],normal[1],normal[2]};
 }
 // NEEDS TO BE IMPLEMENTED
