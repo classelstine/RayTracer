@@ -6,18 +6,20 @@ using namespace std;
 Scene *scn;
 bool camera_set = false; 
 bool obj_parsed = false;
-int x_resolution = 100;
-int y_resolution = 100;
+int x_resolution = 3000;
+int y_resolution = 3000;
 int samples_per_pix = 0;
-float max_recursive_depth = 1;
+float max_recursive_depth = 0;
 float reflectivity = 0.75;
+Color sky = Color(70.0/255.0, 130.0/255.0, 180/255.0);
 /*
+Color good_ambient = Color( 119.0/255.0,  139.0/255.0, 165.0/255.0);
 valarray<float> c1 = {0.0, 0.0, 10.0};
-Color KA = Color(0.4, 0.4, 0.4);
+Color KA = Color(0.5, 0.5, 0.5);
 //Color KA = Color(0.0, 0.0, 0.0);
-Color KD = Color(0.3, 0.3, 0.0);
+Color KD = Color(0.2, 0.3, 0.8);
 //Color KD = Color(0.0, 0.0, 0.0);
-Color KS = Color(0.3, 0.3, 0.0);
+Color KS = Color(0.2, 0.3, 0.8);
 //Color KS = Color(0.0, 0.0, 0.0);
 float SPU = 2;
 float SPV = 2;
@@ -29,7 +31,7 @@ Color KD1 = Color(0.9, 0.5, 0.1);
 Color KS1 = Color(0.8, 0.4, 0.0);
 float SPU1 = 2;
 float SPV1 = 2;
-Material m1 = Material(KA, KD, KS, SPU, SPV);
+Material m1 = Material(good_ambient, KD, KS, SPU, SPV);
 Material m2 = Material(KA1, KD1, KS1, SPU1, SPV1);
 Sphere* s1 = new Sphere(c1, 4.0, m1); 
 Sphere* s2 = new Sphere(c2, 1.0, m2); 
@@ -40,10 +42,8 @@ valarray<float> p3 = {1, -1, 10};
 Triangle* t1 = new Triangle(p1, p2, p3, m1);
 Func_Sphere* fs1 = new Func_Sphere(c1, 1.0, m1);
 Func_Sphere* fs2 = new Func_Sphere(c1, 1.0, m1);
-vector<Object*> objects = {fs2};
-vector<Light*> lights = {};
+vector<Object*> objects = {fs1};
 */
-
 Color ka = Color(0.4, 0.4, 0.4);
 Color kd = Color(0.3, 0.3, 0.0);
 Color ks = Color(0.3, 0.3, 0.0);
@@ -145,8 +145,8 @@ void Film::commit(Sample s, Color c) {
 Sampler::Sampler(void) {
     current_px = 0;
     current_py = 0;
-    max_x = 599;
-    max_y = 599;
+    max_x = x_resolution - 1;
+    max_y = y_resolution - 1;
 }
 
 Sampler::Sampler(int x_res, int y_res) {
@@ -384,6 +384,11 @@ void Shader::phong(valarray<float> point, valarray<float> normal, valarray<float
   c->r = min(tmp_pixel_color.r, (float) 1.0);
   c->g = min(tmp_pixel_color.g, (float) 1.0);
   c->b = min(tmp_pixel_color.b, (float) 1.0);
+  if (c->r + c->g + c->b <= 0.01) {
+    c->r = sky.r;
+    c->g = sky.g;
+    c->b = sky.b;
+  }
 }
 
 void reflectance(valarray<float> light_source, valarray<float> normal, valarray<float> *reflectance) { 
@@ -559,12 +564,12 @@ Scene::Scene(void) {
     UR = {-1,1,0};
     LL = {1,-1,0};
     LR = {-1,-1,0};
-    resolution_x = 1000;
-    resolution_y = 1000;
+    resolution_x = x_resolution;
+    resolution_y = y_resolution;
     sampler = Sampler();
     camera = Camera();
     raytracer = Raytracer();
-    film = Film(1000, 1000, 1);
+    film = Film(x_resolution, y_resolution, 1);
 }
 
 
