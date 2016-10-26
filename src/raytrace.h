@@ -281,6 +281,7 @@ class Func_Sphere: public Object {
         void translate(float, float, float, valarray<float>, valarray<float>*);
         void scale(float, float, float, valarray<float>, valarray<float>*);
         void rotate(float, float, float, float, valarray<float>, valarray<float>*);
+        void exp_rotate(float, float, float, valarray<float>, valarray<float>*);
 };
 
 Func_Sphere::Func_Sphere(valarray<float> c, float r, Material m) {
@@ -295,6 +296,22 @@ void Func_Sphere::translate(float x, float y, float z, valarray<float> world, va
 
 void Func_Sphere::scale(float x, float y, float z, valarray<float> world, valarray<float> *obj) {
     *obj = {world[0]/x, world[1]/y, world[2]/z};    
+}
+
+void deg_to_rad(float d, float* r) {
+    *r = (PI / 180.0) * d;
+}
+
+void Func_Sphere::exp_rotate(float x, float y, float z, valarray<float> world, valarray<float>* obj) {
+    float x_rad = 0.0;
+    float y_rad = 0.0;
+    float z_rad = 0.0;
+    deg_to_rad(x, &x_rad);
+    deg_to_rad(y, &y_rad);
+    deg_to_rad(z, &z_rad);
+    rotate(1.0, 0.0, 0.0, x_rad, world, obj);
+    rotate(0.0, 1.0, 0.0, y_rad, *obj, obj);
+    rotate(0.0, 0.0, 1.0, z_rad, *obj, obj);
 }
 
 void Func_Sphere::rotate(float x, float y, float z, float radians, valarray<float> world, valarray<float> *obj) {
@@ -324,18 +341,19 @@ void Func_Sphere::dist(valarray<float> p, float*d) {
     p[0] = p[0]/(1.0 - 0.2 * r);
     */
     // This part makes a grid of spheres.
-
+    
     p[0] = 2.0 * ((p[0]/2.0) - floor((p[0]/2.0) + (1.0/2.0)));
     p[1] = 2.0 * ((p[1]/2.0) - floor((p[1]/2.0) + (1.0/2.0)));
+    /* 
     p[2] = 2.0 * ((p[2]/2.0) - floor((p[2]/2.0) + (1.0/2.0)));
-    
+    */
     // THIS IS THE MOST BASIC FORM OF A SPHERE
-    
+    /*
     float dist_to_center = sqrt(pow((p), 2).sum());
     float inf_spheres = (-1) * (dist_to_center - radius);
     float plane = 3.0  - p[2];
     *d = max(plane, inf_spheres);
-    
+    */
 
     // THIS IS MULTIPLE SPHERES
     /*  
@@ -380,15 +398,15 @@ void Func_Sphere::dist(valarray<float> p, float*d) {
     */
 
     // THIS IS A LINEAR TRANSLATION
-    /*
+
     valarray<float> obj_point = {0,0,0};
-    scale(2, 3, 1, p, &obj_point);
-    rotate(0,0,1,PI/4, obj_point, &obj_point);
-    translate(0,0,10,obj_point,&obj_point);
+    //exp_rotate(0, 0, 0, obj_point, &obj_point);
+    //rotate(0.0,0.0,1.0, PI/6, obj_point, &obj_point);
+    //scale(2, 3, 1, p, &obj_point);
+    translate(0,0,20,p,&obj_point);
     float dist_to_center = sqrt(pow((obj_point), 2).sum());
     float plane = 3.0 - obj_point[0];
     *d = min(dist_to_center - radius, plane);
-    */
 
     // THIS IS A SUPERQUADRIC
     /*
@@ -396,10 +414,12 @@ void Func_Sphere::dist(valarray<float> p, float*d) {
     float s = 0.5;
     float t = 0.5;
     valarray<float> obj_point = {0,0,0};
-    rotate(0.0,0,1.0,PI/6,p,&obj_point);
+    rotate(1.0,0,1.0,PI/6,p,&obj_point);
+    scale(10, 6, 6, obj_point, &obj_point);
     translate(0,0,10,obj_point,&obj_point);
     *d = (-1) *(1.0 - pow(abs(obj_point[0]),r) - pow(abs(obj_point[1]), s)- pow(abs(obj_point[2]), t));
     */
+
 
 }
 
@@ -566,7 +586,7 @@ Shader::Shader(void) {
     Color color(1.0, 1.0, 1.0);
     Light light1 = Light(p1, color, false);
     */
-    valarray<float> p1 = {0.0, 0.0, 0.0};
+    valarray<float> p1 = {15.0, 15.0, 0.0};
     valarray<float> p2 = {0, 20, 0};
     valarray<float> d = {-1, -1, 1};
     Color white(1.0, 1.0, 1.0);

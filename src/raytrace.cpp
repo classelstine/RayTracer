@@ -4,19 +4,19 @@
 
 using namespace std;
 Scene *scn;
-int x_resolution = 1000;
-int y_resolution = 1000;
+int x_resolution = 3000;
+int y_resolution = 3000;
 int samples_per_pix = 0;
 float max_recursive_depth = 0;
 float reflectivity = 0.75;
 Color sky = Color(70.0/255.0, 130.0/255.0, 180/255.0);
 Color good_ambient = Color( 119.0/255.0,  139.0/255.0, 165.0/255.0);
-valarray<float> c1 = {0.0, 0.0, 50.0};
+valarray<float> c1 = {0.0, 0.0, 10.0};
 Color KA = Color(0.5, 0.5, 0.5);
 //Color KA = Color(0.0, 0.0, 0.0);
-Color KD = Color(0.3, 0.3, 0.);
+Color KD = Color(0.2, 0.3, 0.8);
 //Color KD = Color(0.0, 0.0, 0.0);
-Color KS = Color(0.3, 0.3, 0.0);
+Color KS = Color(0.2, 0.3, 0.8);
 //Color KS = Color(0.0, 0.0, 0.0);
 float SPU = 2;
 float SPV = 2;
@@ -28,7 +28,7 @@ Color KD1 = Color(0.9, 0.5, 0.1);
 Color KS1 = Color(0.8, 0.4, 0.0);
 float SPU1 = 2;
 float SPV1 = 2;
-Material m1 = Material(KA, KD, KS, SPU, SPV);
+Material m1 = Material(good_ambient, KD, KS, SPU, SPV);
 Material m2 = Material(KA1, KD1, KS1, SPU1, SPV1);
 Sphere* s1 = new Sphere(c1, 4.0, m1); 
 Sphere* s2 = new Sphere(c2, 1.0, m2); 
@@ -37,9 +37,9 @@ valarray<float> p1 = {-1, -1, 10};
 valarray<float> p2 = {0, 1, 10};
 valarray<float> p3 = {1, -1, 10};
 Triangle* t1 = new Triangle(p1, p2, p3, m1);
-Func_Sphere* fs1 = new Func_Sphere(c1, 10.0, m1);
+Func_Sphere* fs1 = new Func_Sphere(c1, 1.0, m1);
 Func_Sphere* fs2 = new Func_Sphere(c1, 1.0, m1);
-vector<Object*> objects = {s1};
+vector<Object*> objects = {fs1};
 
 void dist(valarray<float> p1, valarray<float> p2, float* d);
 /*
