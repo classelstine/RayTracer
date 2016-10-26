@@ -558,10 +558,10 @@ Scene::Scene(void) {
     UR.resize(3);
     LL.resize(3);
     LR.resize(3);
-    UL = {1,1, 0};  
-    UR = {-1,1,0};
-    LL = {1,-1,0};
-    LR = {-1,-1,0};
+    UL = {1, 1,3};  
+    UR = {-1,1,3};
+    LL = {1,-1,3};
+    LR = {-1,-1,3};
     resolution_x = x_resolution;
     resolution_y = y_resolution;
     sampler = Sampler();
@@ -860,28 +860,57 @@ int main(int argc, char *argv[]) {
     }
 
     
-    Color ka = Color(0.4, 0.4, 0.4);
-    Color kd = Color(0.3, 0.3, 0.0);
-    Color ks = Color(0.3, 0.3, 0.0);
+    Color ka = Color(0.1, 0.1, 0.1);
+    Color kd = Color(1, 0, 1);
+    Color ks = Color(1, 1, 1);
     Color kr = Color(0.0, 0.0, 0.0);
-    float SPU = 2;
-    float SPV = 2;
+    float SPU = 50;
+    float SPV = 50;
     Material default_material = Material(ka, kd, ks, kr, SPU, SPV);
-    valarray<float> center2 = {0.0, 0.0, 5.0};
+    valarray<float> center2 = {0.0, 0.0, 20.0};
     Sphere* s2 = new Sphere(center2, 1.0, default_material);
     valarray<float> rot = {0, 10, 10, 10};
     s2->lin_transform = {rot};
     //objects.push_back(s2);
 
-    Sphere* s3 = new Sphere(center2, 1, default_material);
+    Sphere* s3 = new Sphere(center2, 3, default_material);
     valarray<float> trans = {2,0.0,0.0,1.0};
     //s3->lin_transform = {trans};
     objects.push_back(s3);
-    Light* pl = new Light({15, 15, 0}, Color(1, 1, 1), false, false);
-    lights.push_back(pl);
+    Light* dl = new Light({-0.577, -0.577, 0.577}, Color(1, 1, 1), true, false);
+    Light* dl2 = new Light({-0.577, 0.577, 0.577}, Color(0,0, 1), true, false);
+    Light* pl2 = new Light({5, 5, 10}, Color(1,1, 1), false, false);
+    lights.push_back(pl2);
+    //lights.push_back(dl);
+    //lights.push_back(dl2);
+
+
+    Material t_mat = Material(Color(0.1, 0.1, 0.1), Color(0.1, 0.1, 0.1), Color(1, 1, 1), Color(0, 0, 0), 50, 50);  
+    Triangle* t1 = new Triangle({-5, 5, 17}, {-1, 4, 20}, {-6, -1, 20}, t_mat);
+    objects.push_back(t1);
+
+    Material s_mat_4 = Material(ka, Color(1, 1, 0), ks, kr, SPU, SPV);
+    Material s_mat_5 = Material(ka, Color(0,1,1), ks, kr, SPU, SPV);
+    Sphere* s4 = new Sphere({2, 2, 15}, 1, s_mat_4);
+    Sphere* s5 = new Sphere({2, -2, 15}, 1, s_mat_5);
+    objects.push_back(s4);
+    objects.push_back(s5);
     scn->initialize();
     scn->render();
     cout << "All done!" << endl;
 }
+/*
+ cam 0 0 0 -1 -1 -3 1 -1 -3 -1 1 -3 1 1 -3
+ ltd 0.577 -0.577 -0.577 1 1 1
+ ltd 0.577 0.577 -0.577 0 0 1
 
+ mat 0.1 0.1 0.1 1 0 1 1 1 1 50 0 0 0
+ sph 0 0 -20 3
+ mat 0.1 0.1 0.1 1 1 0 1 1 1 50 0 0 0
+ sph -2 2 -15 1
+ mat 0.1 0.1 0.1 0 1 1 1 1 1 50 0 0 0
+ sph -2 -2 -15 1
+ mat 0.1 0.1 0.1 0.1 0.1 0.1 1 1 1 50 1 1 1
+ tri 5 5 -17 1 4 -20 6 -1 -20
+ */
 

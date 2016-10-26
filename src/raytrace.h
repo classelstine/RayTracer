@@ -710,7 +710,7 @@ class Camera {
 
 Camera::Camera(void) {
     eye_pos.resize(3);
-    eye_pos = {0,0,-1.5};
+    eye_pos = {0,0,0};
 }
 
 /*
