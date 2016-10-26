@@ -632,15 +632,18 @@ bool loadOBJ(char *path, Material input_material) {
         } 
         else if ( strcmp( lineHeader, "f" ) == 0 ) {
             int v1,v2,v3;
-            int matches = fscanf(file, "%d/%d/%d\n", &v1, &v2, &v3);
+            int matches = fscanf(file, "%d %d %d\n", &v1, &v2, &v3);
             if (matches != 3){
                 printf("File can't be read by our simple parser : ( Try exporting with other options\n");
                 return false;
             }
+            cout << "Triangle attempt" << endl;
             Triangle* newtri = new Triangle(temp_vertices[v1], temp_vertices[v2], temp_vertices[v3], input_material);
+            cout << "Triangle complete" << endl;
             objects.push_back(newtri);
         }
     }
+    cout << "OBJ DONE" << endl;
     return true;
 } 
 
