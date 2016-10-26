@@ -6,8 +6,8 @@ using namespace std;
 Scene *scn;
 bool camera_set = false; 
 bool obj_parsed = false;
-int x_resolution = 200;
-int y_resolution = 200;
+int x_resolution = 500;
+int y_resolution = 500;
 int samples_per_pix = 0;
 float max_recursive_depth = 0;
 float reflectivity = 0.75;
@@ -51,6 +51,8 @@ Color kr = Color(0.0, 0.0, 0.0);
 float SPU = 2;
 float SPV = 2;
 Material default_material = Material(ka, kd, ks, kr, SPU, SPV);
+valarray<float> center = {0.0, 0.0, 5.0};
+Sphere* s1 = new Sphere(center, 1.0, default_material);
 vector<Object*> objects = {};
 vector<Light*> lights = {};
 void dist(valarray<float> p1, valarray<float> p2, float* d);
@@ -187,16 +189,18 @@ bool Sampler::get_sample(Sample *sample){
 
 bool Sphere::t_hit(Ray ray, float* t) {
     //cout<< "in sphere t_hit" << endl;
+    valarray<float> c2 = {0.0,0.0,0.0};
+    world_to_obj(center, &c2);
     valarray<float> d = ray.direction;
     world_to_obj(d, &d);
     valarray<float> e = ray.point;
     world_to_obj(e, &e);
-    float discriminant = pow(dot(d,(e - center)), 2) - (dot(d, d)) * (dot(e - center, e - center) - pow(radius, 2));
+    float discriminant = pow(dot(d,(e - c2)), 2) - (dot(d, d)) * (dot(e - c2, e - c2) - pow(radius, 2));
     if(discriminant < 0.0) {
         *t = -1;
         return false;
     }
-    float numerator = -1.0 * (dot(d, (e-center)));
+    float numerator = -1.0 * (dot(d, (e-c2)));
     float denominator = dot(d,d);
     if (discriminant > 0) {
         float t1 = (numerator + discriminant) / denominator;
@@ -854,6 +858,27 @@ int main(int argc, char *argv[]) {
         } 
         i = i + 1;
     }
+
+    
+    Color ka = Color(0.4, 0.4, 0.4);
+    Color kd = Color(0.3, 0.3, 0.0);
+    Color ks = Color(0.3, 0.3, 0.0);
+    Color kr = Color(0.0, 0.0, 0.0);
+    float SPU = 2;
+    float SPV = 2;
+    Material default_material = Material(ka, kd, ks, kr, SPU, SPV);
+    valarray<float> center2 = {0.0, 0.0, 5.0};
+    Sphere* s2 = new Sphere(center2, 1.0, default_material);
+    valarray<float> rot = {0, 10, 10, 10};
+    s2->lin_transform = {rot};
+    //objects.push_back(s2);
+
+    Sphere* s3 = new Sphere(center2, 1, default_material);
+    valarray<float> trans = {2,0.0,0.0,1.0};
+    //s3->lin_transform = {trans};
+    objects.push_back(s3);
+    Light* pl = new Light({15, 15, 0}, Color(1, 1, 1), false, false);
+    lights.push_back(pl);
     scn->initialize();
     scn->render();
     cout << "All done!" << endl;

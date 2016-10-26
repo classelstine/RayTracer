@@ -512,9 +512,6 @@ class Sphere: public Object {
     public:
         Sphere(valarray<float> c, float r, Material);
         float radius;
-        valarray<float> trans;
-        //valarray<float> rot;
-        //valarray<float> sca;
         valarray<float> center;
         bool t_hit(Ray ray, float* t);
         virtual void get_normal(valarray<float> point, valarray<float>* normal);
@@ -529,7 +526,9 @@ Sphere::Sphere(valarray<float> c, float r, Material m) {
 
 void Sphere::get_normal(valarray<float> p, valarray<float>* n) {
     world_to_obj(p, &p);
-    valarray<float> normal = p - center;
+    valarray<float> c2 = {0.0,0.0,0.0};
+    world_to_obj(center, &c2);
+    valarray<float> normal = p - c2;
     normalize(&normal);
     n->swap(normal);
 }
