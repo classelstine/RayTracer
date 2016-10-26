@@ -652,34 +652,13 @@ void Light::light_vector(valarray<float> point, valarray<float> *l_vec) {
 
 class Shader {
     public :
-        vector<Light> lights;
         Shader();
-        Shader(vector<Light>);
         void phong(valarray<float> point, valarray<float> normal, valarray<float> view, Color * c, Material *mat);
 };
 
 Shader::Shader(void) {
-    /*
-    valarray<float> p1 = {10, 10, 0};
-    Color color(1.0, 1.0, 1.0);
-    Light light1 = Light(p1, color, false);
-    */
-    valarray<float> p1 = {15.0, 15.0, 0.0};
-    valarray<float> p2 = {0, 20, 0};
-    valarray<float> d = {-1, -1, 1};
-    Color white(1.0, 1.0, 1.0);
-    Color color(1.0, 1.0, 1.0);
-    Color color1(0.0, 0.2, 0.2);
-    Light light1 = Light(p1, color, false, false);
-    Light light2 = Light(p2, color1, false, false);
-    Light light3 = Light(d, white, true, false);
-    lights = {light1};
-    //lights = {light1,light2,light3};
 }
 
-Shader::Shader(vector<Light> l_list) {
-    lights = l_list;
-}
 
 void reflectance(valarray<float> light_source, valarray<float> normal, valarray<float> *reflectance);
 
@@ -699,8 +678,8 @@ float find_specular_power(valarray<float> normal, valarray<float> view, valarray
 
 class Raytracer {
     bool is_obj;
+    Shader shader;
     public:
-        Shader shader;
         void trace(Ray, Color*);
         Raytracer();
         void reflectance_harshil(Ray, Color*, float);
@@ -752,8 +731,8 @@ class Scene {
     Sampler sampler;
     Camera camera;
     Film film;
+    Raytracer raytracer;
     public:
-        Raytracer raytracer;
         valarray<float> eye_position;
         valarray<float> UL;
         valarray<float> UR;
@@ -762,13 +741,13 @@ class Scene {
         float resolution_x;
         float resolution_y;
         Scene();
-        Scene(valarray<float>, valarray<float>, valarray<float>, valarray<float>, valarray<float>);
+        Scene(valarray<float>, valarray<float>, valarray<float>, valarray<float>, valarray<float>, float, float);
         void initialize();
         void render();
         void screen_to_world(valarray<float> screen, valarray<float>* world);
 };
 
-Scene::Scene(valarray<float> eye, valarray<float> ll, valarray<float> lr, valarray<float> ul, valarray<float> ur) {
+Scene::Scene(valarray<float> eye, valarray<float> ll, valarray<float> lr, valarray<float> ul, valarray<float> ur, float rx, float ry) {
     eye_position = eye;
     LL = ll;
     LR = lr;
@@ -777,6 +756,8 @@ Scene::Scene(valarray<float> eye, valarray<float> ll, valarray<float> lr, valarr
     sampler = Sampler();
     camera = Camera();
     raytracer = Raytracer();
+    resolution_x = rx;
+    resolution_y = ry;
     film = Film(resolution_x, resolution_y, 1);
 }
 

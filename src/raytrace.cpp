@@ -6,8 +6,8 @@ using namespace std;
 Scene *scn;
 bool camera_set = false; 
 bool obj_parsed = false;
-int x_resolution = 100;
-int y_resolution = 100;
+int x_resolution = 200;
+int y_resolution = 200;
 int samples_per_pix = 0;
 float max_recursive_depth = 0;
 float reflectivity = 0.75;
@@ -67,7 +67,7 @@ Film::Film(int x_res, int y_res, int sr) {
     res_x = x_res;
     res_y = y_res;
     sample_rate = sr;
-   pixel_buckets = vector<vector<vector<Color>>> (x_res, vector<vector<Color>>(y_res, vector<Color>(sr, Color(0,0,0))));
+    pixel_buckets = vector<vector<vector<Color>>> (x_res, vector<vector<Color>>(y_res, vector<Color>(sr, Color(0,0,0))));
 }
 
 Film::Film(void) {
@@ -312,11 +312,12 @@ void Shader::phong(valarray<float> point, valarray<float> normal, valarray<float
     cout << "normal vector " << normal[0] << " " << normal[1] << " " << normal[2] << endl;
     cout << "view vector " << view[0] << " " << view[1] << " " << view[2] << endl;
     }
+    cout << "light vector size " << lights.size() << endl;
     for(int d = 0; d < lights.size(); d++) {
-      Light cur_light = lights[d];
+      Light cur_light = *lights[d];
       valarray<float> light_vec = {0.0,0.0,0.0};
       cur_light.light_vector(point, &light_vec);
-      if (false) {
+      if (true) {
       cout << "light vector " << light_vec[0] << " " << light_vec[1] << " " << light_vec[2] << endl;
       }
       Color light_col = cur_light.color;
@@ -630,10 +631,9 @@ bool loadOBJ(char *path, Material input_material) {
                 printf("File can't be read by our simple parser : ( Try exporting with other options\n");
                 return false;
             }
-            cout << "Triangle attempt" << endl;
-            v1 = v1 - 1;
-            v2 = v2 - 1;
-            v3 = v3 - 1;
+            v1 = v1 -1;
+            v2 = v2-1;
+            v3 = v3 -1;
             Triangle* newtri = new Triangle(temp_vertices[v1], temp_vertices[v2], temp_vertices[v3], input_material);
             cout << "Triangle complete" << endl;
             objects.push_back(newtri);
@@ -661,7 +661,7 @@ int main(int argc, char *argv[]) {
     */
     int i = 0;
     bool input_material = false; 
-    Material* last_material; 
+    Material last_material = default_material; 
     Scene* scn = new Scene();
     vector<valarray<float>> cur_LT = {};
     while( i + 1 <= argc ) {
@@ -671,6 +671,7 @@ int main(int argc, char *argv[]) {
          * There will only be one camera line in a file.
          */
         if (strcmp(argv[i], "cam") == 0) { 
+            //cout << "parsing camera" << endl;
             if (camera_set) { 
                 i = i + 15;
             } else { 
@@ -679,7 +680,7 @@ int main(int argc, char *argv[]) {
                 valarray<float> lr = {(float) atof(argv[i+7]), (float) atof(argv[i+8]), (float) atof(argv[i+9])};
                 valarray<float> ul = {(float) atof(argv[i+10]), (float) atof(argv[i+11]), (float) atof(argv[i+12])};
                 valarray<float> ur = {(float) atof(argv[i+13]), (float) atof(argv[i+14]), (float) atof(argv[i+15])};
-                scn = new Scene(eye, ll, lr, ul, ur);
+                scn = new Scene(eye, ll, lr, ul, ur, x_resolution, y_resolution);
                 i = i + 15;
             } 
         }
@@ -689,6 +690,7 @@ int main(int argc, char *argv[]) {
          * Where ka, kd, ks, and kr are the coefficients for ambient, diffuse, specular, and reflective.
          */
         else if (strcmp(argv[i], "mat") == 0) { 
+            //cout << "parsing material" << endl;
             Color ka = Color((float) atof(argv[i+1]), (float) atof(argv[i+2]), (float) atof(argv[i+3]));
             Color kd = Color((float) atof(argv[i+4]), (float) atof(argv[i+5]), (float) atof(argv[i+6]));
             Color ks = Color((float) atof(argv[i+7]), (float) atof(argv[i+8]), (float) atof(argv[i+9]));
@@ -697,7 +699,7 @@ int main(int argc, char *argv[]) {
             Color kr = Color((float) atof(argv[i+11]), (float) atof(argv[i+12]), (float) atof(argv[i+13]));
             Material m1 = Material(ka, kd, ks, kr, spu, spv);
             input_material = true; 
-            last_material = &m1;  
+            last_material = Material(ka, kd, ks, kr, spu, spv);
             i = i + 13;
         } 
         /*
@@ -707,7 +709,7 @@ int main(int argc, char *argv[]) {
         else if (strcmp(argv[i], "obj") == 0) { 
             Material m; 
             if (input_material) {  
-                m = *last_material;   
+                m = last_material;   
             } else { 
                 m = default_material;
             }
@@ -727,6 +729,7 @@ int main(int argc, char *argv[]) {
          * ltp px py pz r g b [falloff]
          */
         else if (strcmp(argv[i], "ltp") == 0) { 
+            //cout << "parsing point light" << endl;
             valarray<float> point = {(float) atof(argv[i+1]), (float) atof(argv[i+2]), (float) atof(argv[i+3])};
             Color c = Color((float) atof(argv[i+4]), (float) atof(argv[i+5]), (float) atof(argv[i+6])); 
             Light *p_light = new Light(point, c, false, false);
@@ -737,6 +740,7 @@ int main(int argc, char *argv[]) {
          * ltd dx dy dz r g b
          */
         else if (strcmp(argv[i], "ltd") == 0) { 
+            //cout << "parsing directional light" << endl;
             valarray<float> point = {(float) atof(argv[i+1]), (float) atof(argv[i+2]), (float) atof(argv[i+3])};
             Color c = Color((float) atof(argv[i+4]), (float) atof(argv[i+5]), (float) atof(argv[i+6])); 
             Light *d_light = new Light(point, c, true, false);
@@ -747,6 +751,7 @@ int main(int argc, char *argv[]) {
          * lta r g b
          */
         else if (strcmp(argv[i], "lta") == 0) { 
+            //cout << "parsing ambient light" << endl;
             valarray<float> point = {0.0,0.0,0.0};
             Color c = Color((float) atof(argv[i+1]), (float) atof(argv[i+2]), (float) atof(argv[i+3])); 
             Light *a_light = new Light(point, c, false, true);
@@ -811,12 +816,18 @@ int main(int argc, char *argv[]) {
         }
         */
         else if (strcmp(argv[i], "sph") == 0) { 
+           //cout << "parsing sphere" << endl;
             Material m; 
             if (input_material) {  
-                m = *last_material;   
+                m = last_material;   
             } 
             valarray<float> c = {(float) atof(argv[i+1]), (float) atof(argv[i+2]), (float) atof(argv[i+3])};
             float radius = (float) atof(argv[i+4]);
+            cout << "sphere KA r g b" << m.KA.r << m.KA.g << m.KA.b << endl;
+            cout << "sphere KD r g b" << m.KD.r << m.KD.g << m.KD.b << endl;
+            cout << "sphere KS r g b" << m.KS.r << m.KS.g << m.KS.b << endl;
+            cout << "sphere KR r g b" << m.KR.r << m.KR.g << m.KR.b << endl;
+            cout << "sphere SPU" << m.SPU << endl;
             Sphere* newsphere = new Sphere(c, radius, m);
             newsphere->lin_transform = cur_LT;
             objects.push_back(newsphere);
@@ -829,7 +840,7 @@ int main(int argc, char *argv[]) {
         else if (strcmp(argv[i], "tri") == 0) { 
             Material m; 
             if (input_material) {  
-                m = *last_material;   
+                m = last_material;   
             } else { 
                 m = default_material;
             } 
