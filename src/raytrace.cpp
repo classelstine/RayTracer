@@ -4,11 +4,14 @@
 
 using namespace std;
 Scene *scn;
+bool camera_set = false; 
+bool obj_parsed = false;
 int x_resolution = 100;
 int y_resolution = 100;
 int samples_per_pix = 0;
 float max_recursive_depth = 1;
 float reflectivity = 0.75;
+/*
 valarray<float> c1 = {0.0, 0.0, 10.0};
 Color KA = Color(0.4, 0.4, 0.4);
 //Color KA = Color(0.0, 0.0, 0.0);
@@ -38,7 +41,18 @@ Triangle* t1 = new Triangle(p1, p2, p3, m1);
 Func_Sphere* fs1 = new Func_Sphere(c1, 1.0, m1);
 Func_Sphere* fs2 = new Func_Sphere(c1, 1.0, m1);
 vector<Object*> objects = {fs2};
+vector<Light*> lights = {};
+*/
 
+Color ka = Color(0.4, 0.4, 0.4);
+Color kd = Color(0.3, 0.3, 0.0);
+Color ks = Color(0.3, 0.3, 0.0);
+Color kr = Color(0.0, 0.0, 0.0);
+float SPU = 2;
+float SPV = 2;
+Material default_material = Material(ka, kd, ks, kr, SPU, SPV);
+vector<Object*> objects = {};
+vector<Light*> lights = {};
 void dist(valarray<float> p1, valarray<float> p2, float* d);
 /*
  *                      FILM CLASS
@@ -176,11 +190,11 @@ bool Sphere::t_hit(Ray ray, float* t) {
     valarray<float> d = ray.direction;
     valarray<float> e = ray.point;
     float discriminant = pow(dot(d,(e - center)), 2) - (dot(d, d)) * (dot(e - center, e - center) - pow(radius, 2));
-    if(discriminant < 0) {
+    if(discriminant < 0.0) {
         *t = -1;
         return false;
     }
-    float numerator = -1 * (dot(d, (e-center)));
+    float numerator = -1.0 * (dot(d, (e-center)));
     float denominator = dot(d,d);
     if (discriminant > 0) {
         float t1 = (numerator + discriminant) / denominator;
@@ -322,8 +336,10 @@ void Shader::phong(valarray<float> point, valarray<float> normal, valarray<float
       Color new_ambient = Color();
       mult_color(obj->KA, light_col, &new_ambient);
       ambient.add_color(new_ambient);
-      
-      if (shadow_hit(cur_light, point)) {
+      if (cur_light.is_ambient) { 
+          continue; 
+      } 
+      else if (shadow_hit(cur_light, point)) {
       //if (false) {
           //cout<< "RETURNED TRUE" << endl;
           //DIFFUSE
@@ -590,6 +606,39 @@ void Scene::screen_to_world(valarray<float> screen, valarray<float>* world) {
     //cout << "World Point: " << w[0] << "," << w[1] << "," << w[2] << endl;
 }
 
+bool loadOBJ(char *path, Material input_material) { 
+    std::vector< valarray<float>> temp_vertices;
+    FILE * file = fopen(path, "r");
+    if( file == NULL ){
+        printf("Can't read the OBJ file !\n");
+        return false;
+    } 
+    while( 1 ) {
+        char lineHeader[128];
+        int res = fscanf(file, "%s", lineHeader);
+        if (res == EOF)
+            break; // EOF = End Of File. Quit the loop.
+        //else : parse lineHeader
+        if ( strcmp( lineHeader, "v" ) == 0 ) {
+            float x,y,z; 
+            fscanf(file, "%f %f %f\n", &x, &y, &z );
+            valarray<float> vertex = {x,y,z};
+            temp_vertices.push_back(vertex);
+        } 
+        else if ( strcmp( lineHeader, "f" ) == 0 ) {
+            int v1,v2,v3;
+            int matches = fscanf(file, "%d/%d/%d\n", &v1, &v2, &v3);
+            if (matches != 3){
+                printf("File can't be read by our simple parser : ( Try exporting with other options\n");
+                return false;
+            }
+            Triangle* newtri = new Triangle(temp_vertices[v1], temp_vertices[v2], temp_vertices[v3], input_material);
+            objects.push_back(newtri);
+        }
+    }
+    return true;
+} 
+
 int main(int argc, char *argv[]) {
     cout << "Hello World." << endl;
     float r = 2;
@@ -605,10 +654,181 @@ int main(int argc, char *argv[]) {
         }
     }
     */
-
+    int i = 0;
+    bool input_material = false; 
+    Material* last_material; 
     Scene* scn = new Scene();
+    while( i + 1 <= argc ) {
+        /*
+         * The camera object is specified by a line of the following form:
+         * cam ex ey ez llx lly llz lrx lry lrz ulx uly ulz urx ury urz
+         * There will only be one camera line in a file.
+         */
+        if (strcmp(argv[i], "cam") == 0) { 
+            if (camera_set) { 
+                i = i + 15;
+            } else { 
+                valarray<float> eye = {(float) atof(argv[i+1]), (float) atof(argv[i+2]), (float) atof(argv[i+3])};
+                valarray<float> ll = {(float) atof(argv[i+4]), (float) atof(argv[i+5]), (float) atof(argv[i+6])};
+                valarray<float> lr = {(float) atof(argv[i+7]), (float) atof(argv[i+8]), (float) atof(argv[i+9])};
+                valarray<float> ul = {(float) atof(argv[i+10]), (float) atof(argv[i+11]), (float) atof(argv[i+12])};
+                valarray<float> ur = {(float) atof(argv[i+13]), (float) atof(argv[i+14]), (float) atof(argv[i+15])};
+                scn = new Scene(eye, ll, lr, ul, ur);
+                i = i + 15;
+            } 
+        }
+        /*
+         * A material is specified by:
+         * mat kar kag kab kdr kdg kdb ksr ksg ksb ksp krr krg krb
+         * Where ka, kd, ks, and kr are the coefficients for ambient, diffuse, specular, and reflective.
+         */
+        else if (strcmp(argv[i], "mat") == 0) { 
+            Color ka = Color((float) atof(argv[i+1]), (float) atof(argv[i+2]), (float) atof(argv[i+3]));
+            Color kd = Color((float) atof(argv[i+4]), (float) atof(argv[i+5]), (float) atof(argv[i+6]));
+            Color ks = Color((float) atof(argv[i+7]), (float) atof(argv[i+8]), (float) atof(argv[i+9]));
+            float spu = (float) atof(argv[i+10]);
+            float spv = (float) atof(argv[i+10]);
+            Color kr = Color((float) atof(argv[i+11]), (float) atof(argv[i+12]), (float) atof(argv[i+13]));
+            Material m1 = Material(ka, kd, ks, kr, spu, spv);
+            input_material = true; 
+            last_material = &m1;  
+            i = i + 13;
+        } 
+        /*
+         * A .obj file is specified by:
+         * obj "file name”
+         */
+        else if (strcmp(argv[i], "obj") == 0) { 
+            Material m; 
+            if (input_material) {  
+                m = *last_material;   
+            } else { 
+                m = default_material;
+            }
+            if (!obj_parsed) { 
+                obj_parsed = loadOBJ(argv[i+1], m); 
+                if (!obj_parsed) { 
+                    printf("Please Load a Correct OBJ File Format \n"); 
+                    exit(1);
+                } 
+            } else { 
+                printf("You have already parsed an obj \n"); 
+            } 
+            i = i + 1;
+        } 
+        /*
+         * A point light source is specified by:
+         * ltp px py pz r g b [falloff]
+         */
+        else if (strcmp(argv[i], "ltp") == 0) { 
+            valarray<float> point = {(float) atof(argv[i+1]), (float) atof(argv[i+2]), (float) atof(argv[i+3])};
+            Color c = Color((float) atof(argv[i+4]), (float) atof(argv[i+5]), (float) atof(argv[i+6])); 
+            Light *p_light = new Light(point, c, false, false);
+            lights.push_back(p_light);
+        } 
+        /*
+         * A directional light source is specified by:
+         * ltd dx dy dz r g b
+         */
+        else if (strcmp(argv[i], "ltd") == 0) { 
+            valarray<float> point = {(float) atof(argv[i+1]), (float) atof(argv[i+2]), (float) atof(argv[i+3])};
+            Color c = Color((float) atof(argv[i+4]), (float) atof(argv[i+5]), (float) atof(argv[i+6])); 
+            Light *d_light = new Light(point, c, true, false);
+            lights.push_back(d_light);
+        } 
+        /*
+         * An ambient light source is specified by:
+         * lta r g b
+         */
+        else if (strcmp(argv[i], "lta") == 0) { 
+            valarray<float> point = {0.0,0.0,0.0};
+            Color c = Color((float) atof(argv[i+1]), (float) atof(argv[i+2]), (float) atof(argv[i+3])); 
+            Light *a_light = new Light(point, c, false, true);
+            lights.push_back(a_light);
+        } 
+        /*
+         * A transformation is specified by any of the following:
+         * xft tx ty tz
+         * xfr rx ry rz
+         * xfs sx sy sz
+         * These refer in order to translation, rotation, and scaling. Rotations are exponential maps in degrees
+         * Transformations apply cumulatively in the reverse order they appear in the file.
+         *  Thus the following lines:
+         *  xfr 45 0 0
+         *  xfs 1 1 2
+         *  xfr -45 0 0
+         *  xft 1 2 3
+         *  Would result in the following transformation matrix:
+         *      [r 45 0 0]*[s 1 1 2]*[r -45 0 0]*[t 1 2 3]
+         * When an object line is read, the current transformation will be applied to that object.
+         * Transformations also apply to lights or the camera.
+         * The current transformation may be reset to the identity with the following line:
+         *      xfz
+         */
+        else if (strcmp(argv[i], "xfr") == 0) { 
+             
+        } 
+        else if (strcmp(argv[i], "xfs") == 0) { 
+             
+        } 
+        else if (strcmp(argv[i], "xft") == 0) { 
+             
+        } 
+        else if (strcmp(argv[i], "xfz") == 0) { 
+             
+        } 
+        /*
+         * A sphere is specified by:
+         *   sph cx cy cz r
+        
+        For example:
+        vector<enemyClass*> vectorOfEnemies;
+        for (int i=0; i<numberOfEnemies; ++i)
+        {
+            enemyClass* someNewEnemyObjectPointer = new someNewEnemyObject();
+            vectorOfEnemies.push_back(someNewEnemyObjectPointer);
+            a whole bunch of other stuff I expect
+        }
+        make sure you deallocate the memory when you are done with your vector
+        for (int i=0; i<vectorOfEnemies.size(); i++)
+        {
+        delete vectorOfEnemies[i];
+        }
+        */
+        else if (strcmp(argv[i], "sph") == 0) { 
+            Material m; 
+            if (input_material) {  
+                m = *last_material;   
+            } 
+            valarray<float> c = {(float) atof(argv[i+1]), (float) atof(argv[i+2]), (float) atof(argv[i+3])};
+            float radius = (float) atof(argv[i+4]);
+            Sphere* newsphere = new Sphere(c, radius, m);
+            objects.push_back(newsphere);
+            i = i+4;
+        } 
+        /*
+         * A triangle is specified by:
+         *   tri ax ay az bx by bz cx cy cz
+         */
+        else if (strcmp(argv[i], "tri") == 0) { 
+            Material m; 
+            if (input_material) {  
+                m = *last_material;   
+            } else { 
+                m = default_material;
+            } 
+            valarray<float> a = {(float) atof(argv[i+1]), (float) atof(argv[i+2]), (float) atof(argv[i+3])};
+            valarray<float> b = {(float) atof(argv[i+4]), (float) atof(argv[i+5]), (float) atof(argv[i+6])};
+            valarray<float> c = {(float) atof(argv[i+7]), (float) atof(argv[i+8]), (float) atof(argv[i+9])};
+            Triangle* newtri = new Triangle(a, b, c, m);
+            objects.push_back(newtri);
+            i = i+4;
+        } 
+        i = i + 1;
+    }
     scn->initialize();
     scn->render();
     cout << "All done!" << endl;
 }
+
 

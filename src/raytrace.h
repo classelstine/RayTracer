@@ -216,16 +216,17 @@ class Film {
 
 class Material {
     public:
-        Color KA, KD, KS;
+        Color KA, KD, KS, KR;
         float SPU, SPV;
-        Material(Color, Color, Color, float, float);
+        Material(Color, Color, Color, Color, float, float);
         Material();
 };
 
-Material::Material(Color ka, Color kd, Color ks, float spu, float spv) {
+Material::Material(Color ka, Color kd, Color ks, Color kr, float spu, float spv) {
     KA = ka;
     KD = kd;
     KS = ks;
+    KR = kr;
     SPU = spu;
     SPV = spv;
 }
@@ -266,8 +267,8 @@ void Object::dist(valarray<float> cur_pt,float* d) {
 }
 
 
-void Object::get_normal(valarray<float> point, valarray<float>* normal) {
-}
+void Object::get_normal(valarray<float> point, valarray<float>* normal) { 
+} 
 
 
 class Func_Sphere: public Object {
@@ -453,17 +454,19 @@ void Triangle::get_normal(valarray<float> p, valarray<float>* n) {
 class Light {
     public:
         bool is_direct;
+        bool is_ambient; 
         valarray<float> xyz;
         Color color;
-        Light(valarray<float> p, Color c, bool is_d);
+        Light(valarray<float> p, Color c, bool is_d, bool);
         void light_vector(valarray<float> point, valarray<float> *l_vec);
 };
 
-Light::Light(valarray<float> p, Color c, bool is_d) {
+Light::Light(valarray<float> p, Color c, bool is_d, bool is_a) {
     xyz = p;
     color = c;
     is_direct = is_d;
-    }
+    is_ambient = is_a; 
+}
 
 void Light::light_vector(valarray<float> point, valarray<float> *l_vec) {
     if (is_direct) {
@@ -488,8 +491,8 @@ void Light::light_vector(valarray<float> point, valarray<float> *l_vec) {
  */
 
 class Shader {
-    vector<Light> lights;
     public :
+        vector<Light> lights;
         Shader();
         Shader(vector<Light>);
         void phong(valarray<float> point, valarray<float> normal, valarray<float> view, Color * c, Material *mat);
@@ -507,9 +510,9 @@ Shader::Shader(void) {
     Color white(1.0, 1.0, 1.0);
     Color color(1.0, 1.0, 1.0);
     Color color1(0.0, 0.2, 0.2);
-    Light light1 = Light(p1, color, false);
-    Light light2 = Light(p2, color1, false);
-    Light light3 = Light(d, white, true);
+    Light light1 = Light(p1, color, false, false);
+    Light light2 = Light(p2, color1, false, false);
+    Light light3 = Light(d, white, true, false);
     lights = {light1};
     //lights = {light1,light2,light3};
 }
@@ -536,8 +539,8 @@ float find_specular_power(valarray<float> normal, valarray<float> view, valarray
 
 class Raytracer {
     bool is_obj;
-    Shader shader;
     public:
+        Shader shader;
         void trace(Ray, Color*);
         Raytracer();
         void reflectance_harshil(Ray, Color*, float);
@@ -588,9 +591,9 @@ Camera::Camera(void) {
 class Scene {
     Sampler sampler;
     Camera camera;
-    Raytracer raytracer;
     Film film;
     public:
+        Raytracer raytracer;
         valarray<float> eye_position;
         valarray<float> UL;
         valarray<float> UR;
@@ -599,20 +602,18 @@ class Scene {
         float resolution_x;
         float resolution_y;
         Scene();
-        Scene(valarray<float>, valarray<float>, valarray<float>, valarray<float>, valarray<float>, float, float);
+        Scene(valarray<float>, valarray<float>, valarray<float>, valarray<float>, valarray<float>);
         void initialize();
         void render();
         void screen_to_world(valarray<float> screen, valarray<float>* world);
 };
 
-Scene::Scene(valarray<float> eye, valarray<float> ul, valarray<float> ur, valarray<float> ll, valarray<float> lr, float rx, float ry) {
+Scene::Scene(valarray<float> eye, valarray<float> ll, valarray<float> lr, valarray<float> ul, valarray<float> ur) {
     eye_position = eye;
-    UL = ul;
-    UR = ur;
     LL = ll;
     LR = lr;
-    resolution_x = rx;
-    resolution_y = ry;
+    UL = ul;
+    UR = ur;
     sampler = Sampler();
     camera = Camera();
     raytracer = Raytracer();
@@ -620,6 +621,7 @@ Scene::Scene(valarray<float> eye, valarray<float> ul, valarray<float> ur, valarr
 }
 
 
+bool loadOBJ(char *path, Material input_material);
 
 
 
