@@ -6,10 +6,11 @@ using namespace std;
 Scene *scn;
 bool camera_set = false; 
 bool obj_parsed = false;
-int x_resolution = 500;
-int y_resolution = 500;
+int x_resolution = 1000;
+int y_resolution = 1000;
 int samples_per_pix = 0;
 float max_recursive_depth = 0;
+float mode = 0;
 float reflectivity = 0.75;
 Color sky = Color(70.0/255.0, 130.0/255.0, 180/255.0);
 /*
@@ -270,7 +271,7 @@ bool Triangle::t_hit(Ray ray, float *t) {
  */
 
 bool shadow_hit(Light light, valarray<float> point) {
-    float epsilon = 0.001;
+    float epsilon = 1.0;
     float max_t = 1000;
     valarray<float> light_dir = {0.0,0.0,0.0};
     light.light_vector(point, &light_dir);
@@ -294,7 +295,14 @@ bool shadow_hit(Light light, valarray<float> point) {
                 float norm = sqrt(pow((cord-point), 2).sum());
                 if (norm > epsilon) {
                     light_hit = false;
+                    /*
+                    cout << "T : " << t<< endl;
+                    cout << "light_t: " << light_t << endl;
+                    cout << "norm: " << norm << endl;
+                    cout << "point: " << point[0] << "," << point[1] << "," <<  point[2] << endl;
                     cout << "shadow ray hit" << endl;
+                    */
+                
                 }
             }
         }
@@ -316,12 +324,12 @@ void Shader::phong(valarray<float> point, valarray<float> normal, valarray<float
     cout << "normal vector " << normal[0] << " " << normal[1] << " " << normal[2] << endl;
     cout << "view vector " << view[0] << " " << view[1] << " " << view[2] << endl;
     }
-    cout << "light vector size " << lights.size() << endl;
+    //cout << "light vector size " << lights.size() << endl;
     for(int d = 0; d < lights.size(); d++) {
       Light cur_light = *lights[d];
       valarray<float> light_vec = {0.0,0.0,0.0};
       cur_light.light_vector(point, &light_vec);
-      if (true) {
+      if (false) {
       cout << "light vector " << light_vec[0] << " " << light_vec[1] << " " << light_vec[2] << endl;
       }
       Color light_col = cur_light.color;
@@ -346,6 +354,22 @@ void Shader::phong(valarray<float> point, valarray<float> normal, valarray<float
           float l_n = dot(light_vec, normal);
           float positive_dot = max(l_n,(float)  0.0);
           mult_color(obj->KD, light_col, &diff1);
+          // THIS IS SPECIFICALLY FOR HARSHIL 5 BALLS
+          
+          Color nkd = Color(0.5, 0.5, 0.0);
+          if (mode == 4 || mode == 5) { // MODE -- 4 and 5
+              if (point[0] < -3) {
+                nkd = Color(0.5, 0.0, 0.5);
+              } else if (point[0] > 3) {
+                nkd = Color(0.0, 0.5, 0.5);
+              } else if (point[1] > 3) {
+                nkd = Color(0.3, 0.0, 0.1);
+              } else if (point[1] < -3) {
+                nkd = Color(0.1, 0.0, 0.1); 
+              }
+              mult_color(nkd, light_col, &diff1);
+          }
+          
           scale_color(positive_dot, diff1, &new_diffuse);
           diffuse.add_color(new_diffuse);
           if (false) {
@@ -382,11 +406,7 @@ void Shader::phong(valarray<float> point, valarray<float> normal, valarray<float
   c->r = min(tmp_pixel_color.r, (float) 1.0);
   c->g = min(tmp_pixel_color.g, (float) 1.0);
   c->b = min(tmp_pixel_color.b, (float) 1.0);
-  if (c->r + c->g + c->b <= 0.01) {
-    c->r = sky.r;
-    c->g = sky.g;
-    c->b = sky.b;
-  }
+
 }
 
 void reflectance(valarray<float> light_source, valarray<float> normal, valarray<float> *reflectance) { 
@@ -440,7 +460,6 @@ float find_specular_power(valarray<float> normal, valarray<float> view, valarray
  */
 
 void Raytracer::trace(Ray r, Color *c) {
-    //cout << "RAY TRACER TRACING" << endl;
     valarray<float> view = -1 * r.direction;
     normalize(&view);
     Color next_color = Color();
@@ -451,7 +470,7 @@ void Raytracer::trace(Ray r, Color *c) {
         if (cur_object->t_hit(r, &t)) {
             //cout << "HIT!" << endl;
             valarray<float> cord = {0,0,0};
-            // NOW CORD IS OUR x,y,z point of intersection. 
+            //NOW CORD IS OUR x,y,z point of intersection. 
             r.eval(t, &cord);
             valarray<float> cur_norm = {0.0,0.0,0.0};
             cur_object->get_normal(cord, &cur_norm);
@@ -478,7 +497,7 @@ void Raytracer::reflectance_harshil(Ray ray, Color *c, float depth) {
         float epsilon = 0.01;
         float max_val = 1000;
         valarray<float> cur_pt = {0.0,0.0,0.0};
-        float step_size = 0.1;
+        float step_size = 0.5;
         float cur_t = 0;
         float d = 0;
         float prev_d = 0;
@@ -558,10 +577,10 @@ Scene::Scene(void) {
     UR.resize(3);
     LL.resize(3);
     LR.resize(3);
-    UL = {1, 1,3};  
-    UR = {-1,1,3};
-    LL = {1,-1,3};
-    LR = {-1,-1,3};
+    UL = {1, 1,0};  
+    UR = {-1,1,0};
+    LL = {1,-1,0};
+    LR = {-1,-1,0};
     resolution_x = x_resolution;
     resolution_y = y_resolution;
     sampler = Sampler();
@@ -856,6 +875,10 @@ int main(int argc, char *argv[]) {
             objects.push_back(newtri);
             i = i+4;
         } 
+        else if (strcmp(argv[i], "func") == 0 ) {
+            mode = (float) atof(argv[i+1]);
+            i = i+1;
+        }
         i = i + 1;
     }
 
@@ -876,28 +899,95 @@ int main(int argc, char *argv[]) {
     Sphere* s3 = new Sphere(center2, 3, default_material);
     valarray<float> trans = {2,0.0,0.0,1.0};
     //s3->lin_transform = {trans};
-    objects.push_back(s3);
-    Light* dl = new Light({-0.577, -0.577, 0.577}, Color(1, 1, 1), true, false);
-    Light* dl2 = new Light({-0.577, 0.577, 0.577}, Color(0,0, 1), true, false);
-    Light* pl2 = new Light({5, 5, 10}, Color(1,1, 1), false, false);
+    //objects.push_back(s3);
+    Light* pl = new Light({-1.5, 1.5, 0.0}, Color(0.5, 0.0, 0), false, false);
+    Light* pl1 = new Light({0.0, -1.0, 0.0}, Color(0,0.5, 0.0), false, false);
+    Light* pl2 = new Light({1.5, 1.5, 0}, Color(0.0,0.0, 0.5), false, false);
+    Light* dl = new Light({0,0,-10}, Color(.6, .6, .6), false, false);
     //lights.push_back(pl2);
-    lights.push_back(dl);
-    lights.push_back(dl2);
-
+    //lights.push_back(pl);
+    //lights.push_back(pl1);
+    //lights.push_back(dl);
+    //cout << lights.size() << endl;
 
     Material t_mat = Material(Color(0.1, 0.1, 0.1), Color(0.1, 0.1, 0.1), Color(1, 1, 1), Color(0, 0, 0), 50, 50);  
     Triangle* t1 = new Triangle({-5, 5, 17}, {-1, 4, 20}, {-6, -1, 20}, t_mat);
-    objects.push_back(t1);
-
-    Material s_mat_4 = Material(ka, Color(1, 1, 0), ks, kr, SPU, SPV);
+    //objects.push_back(t1);
+    Material white = Material(ka, Color(1.0, 1.0, 1.0), Color(1.0, 1.0, 1.0), kr, SPU, SPV);
+    Material s_mat_4 = Material(ka, Color(0.27, 0.51, 0.706), Color(0.27, 0.51, 0.706), kr, SPU, SPV);
     Material s_mat_5 = Material(ka, Color(0,1,1), ks, kr, SPU, SPV);
     Sphere* s4 = new Sphere({2, 2, 15}, 1, s_mat_4);
     Sphere* s5 = new Sphere({2, -2, 15}, 1, s_mat_5);
-    objects.push_back(s4);
-    objects.push_back(s5);
+    //objects.push_back(s4);
+    //objects.push_back(s5);
+    
+
+    // HARSHILZ SHIT
+    Func_Sphere* fs = new Func_Sphere({0.5,0.5,2.0}, 0.5, white);
+    //objects.push_back(fs);
+    cout << "MODE:" << mode<< endl;
+    if (mode == 1 || mode == 2 || mode == 3) { // rainbow -- 1, 2, 3
+        lights.push_back(pl2);
+        lights.push_back(pl);
+        lights.push_back(pl1);
+        Func_Sphere* fs = new Func_Sphere({0.0,0.0,5.0},1.0,white);
+        fs->mode = mode;
+        objects.push_back(fs);
+    }
+    if(mode == 3) {
+        max_recursive_depth = 1;
+    }
+    if (mode == 4) { // reflective spheres    
+        Light* pl = new Light({1.0,1.0,1.0}, Color(1.0,1.0,1.0), false, false);
+        lights.push_back(pl);
+        Material yellow = Material(ka, Color(0.5,0.5,0.0), Color(0.5,0.5,0.0), kr, SPU, SPV);
+        Func_Sphere* fs = new Func_Sphere({0.0,0.0,15.0}, 1.0, yellow);
+        fs->mode = mode;
+        objects.push_back(fs);
+        max_recursive_depth = 1;
+    }
+    if (mode == 5) { // reflective ellipses
+        Light* pl = new Light({1.0,1.0,1.0}, Color(1.0,1.0,1.0), false, false);
+        lights.push_back(pl);
+        Material yellow = Material(ka, Color(0.5,0.5,0.0), Color(0.5,0.5,0.0), kr, SPU, SPV);
+        Func_Sphere* fs = new Func_Sphere({0.0,0.0,15.0}, 1.0, yellow);
+        fs->mode = mode;
+        objects.push_back(fs);
+        max_recursive_depth = 1;
+    }
+    if (mode == 6) {// x and y blue balls
+        Light* pl = new Light({10.0,10.0,1.0}, Color(1.0,1.0,1.0), false, false);
+        lights.push_back(pl);
+        Material yellow = Material(ka, Color(70.0/255.0, 130.0/255.0, 180/255.0), Color(70.0/255.0, 130.0/255.0, 180/255.0), kr, SPU, SPV);
+        Func_Sphere* fs = new Func_Sphere({0.0,0.0,30.0}, 1.0, yellow);
+        fs->mode = mode;
+        objects.push_back(fs);
+        max_recursive_depth = 0;
+    }
+    if (mode == 7) {
+
+        Light* pl = new Light({-2.0,-2.0,0.0}, Color(1.0,1.0,1.0), false, false);
+        lights.push_back(pl);
+        Material yellow = Material(ka, Color(1.0,1.0,0.0), Color(1.0,1.0,0.0), kr, SPU, SPV);
+        Func_Sphere* fs = new Func_Sphere({0.0,0.0,7.0}, 1.0, yellow);
+        fs->mode = mode;
+        objects.push_back(fs);
+        max_recursive_depth = 0;
+    }
+    if (mode == 8) {// two balls one box
+        lights.push_back(pl2);
+        lights.push_back(pl);
+        lights.push_back(pl1);
+        Func_Sphere* fs = new Func_Sphere({0.5,0.5,2.0}, 0.5, white);
+        fs->mode = mode;
+        objects.push_back(fs);
+    }
+
+
     scn->initialize();
     scn->render();
     cout << "All done!" << endl;
+
 }
 /*
  cam 0 0 0 -1 -1 -3 1 -1 -3 -1 1 -3 1 1 -3

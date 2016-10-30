@@ -12,6 +12,7 @@
 #define PI 3.1415926535
 using namespace std;
 
+
 //dot valarrays
 float dot(valarray<float> v1, valarray<float> v2) {
     float d = (v1 * v2).sum();
@@ -355,7 +356,8 @@ class Func_Sphere: public Object {
         void get_normal(valarray<float> point, valarray<float>* normal);
         void dist(valarray<float> point, float *d);
         valarray<float> center;
-        float radius;    
+        float radius;
+        float mode;
         //void translate(float, float, float, valarray<float>, valarray<float>*);
         //void scale(float, float, float, valarray<float>, valarray<float>*);
         //void rotate(float, float, float, float, valarray<float>, valarray<float>*);
@@ -367,46 +369,78 @@ Func_Sphere::Func_Sphere(valarray<float> c, float r, Material m) {
     radius = r;
     material = m;
     lin_transform = {};
+    mode = 0;
+    //cout << "func created r:" << r << endl;
 }
 
 
 // If you want a transformation, you must change p before passing into this function. 
 void Func_Sphere::dist(valarray<float> p, float*d) {
     world_to_obj(p, &p);
+    
+    //float dtc = sqrt(pow((p - center), 2).sum());
+    //if (abs(p[0]) <= 0.01 && abs(p[1]) <= 0.01) {
+//cout << "P" << p[0] << "," << p[1] << "," <<  p[2] << endl;
+    //cout << "D: " << dtc - radius << endl;
+    //}
+ 
+    //*d = radius - dtc;
+
     // This part implements an ellipse.
     /* 
     float r = sqrt(pow(p[0], 2) + pow(p[1], 2));
     p[0] = p[0]/(1.0 - 0.2 * r);
     */
     // This part makes a grid of spheres.
+    //p[0] = 2.0 * ((p[0]/2.0) - floor((p[0]/2.0) + (1.0/2.0)));
+    //p[1] = 2.0 * ((p[1]/2.0) - floor((p[1]/2.0) + (1.0/2.0)));
+    //p[2] = 2.0 * ((p[2]/2.0) - floor((p[2]/2.0) + (1.0/2.0)));
     
-    p[0] = 2.0 * ((p[0]/2.0) - floor((p[0]/2.0) + (1.0/2.0)));
-    p[1] = 2.0 * ((p[1]/2.0) - floor((p[1]/2.0) + (1.0/2.0)));
-    /* 
-    p[2] = 2.0 * ((p[2]/2.0) - floor((p[2]/2.0) + (1.0/2.0)));
-    */
+    //translate(2.0, 2.0, 2.0, p, &p);
+    //translate(2.0, 2.0, 2.0, center, &center);
     // THIS IS THE MOST BASIC FORM OF A SPHERE
-    /*
-    float dist_to_center = sqrt(pow((p), 2).sum());
-    float inf_spheres = (-1) * (dist_to_center - radius);
-    float plane = 3.0  - p[2];
-    *d = max(plane, inf_spheres);
-    */
-
+    //translate(2.0, 2.0, 0.0, p, &p);
+    //float dist_to_center = (sqrt(pow((p - center), 2).sum()) - radius);
+    //valarray<float> c2 = {2.0, 2.0, 7.0};
+    //float dtc2 = (sqrt(pow((p - c2), 2).sum()) - 3.0);
+    //float inf_spheres = (-1) * (dist_to_center - radius);
+    //float plane = 5.0 - p[1];
+    //float plane2 = 7.0 - p[0];
+    //float plane3 = 7.0 + p[0];
+    //float plane4 = 5.0 + p[1];
+    //float plane5 = 11.0 - p[2];
+    //float plane6 = 2.0 + p[2];
+    //*d = min(min(min(min(min(min(min(plane6, plane5), plane4), plane3), plane2), plane),  dist_to_center), dtc2);
+    //*d = min(min(min(min(min(plane6, plane4), plane3), plane2), plane),  dist_to_center);
+    //*d = dist_to_center;
+    //float z = 20.0 + p[2];
+    //*d = min(dist_to_center, z);
+    
     // THIS IS MULTIPLE SPHERES
-    /*  
-    valarray<float> c2 = {-3.0, 0.0, 5.0};
-    valarray<float> c3 = {0.0, 3.0, 5.0};
+    /*
+    valarray<float> c2 = {-6.0, 0.0, 15.0};
+    valarray<float> c3 = {0.0, 6.0, 15.0};
+    valarray<float> c4 = {6.0, 0.0, 15.0};
+    valarray<float> c5 = {0.0, -6.0, 15.0};
     float dtc1 = sqrt(pow((p - center), 2).sum());
+    scale(1.0,2.0,1.0, p, &p);
     float dtc2 = sqrt(pow((p - c2), 2).sum());
-    float dtc3 = sqrt(pow((p - c3), 2).sum()); 
+    scale(1.5,0.5,1.0,p,&p);
+    float dtc3 = sqrt(pow((p - c3), 2).sum());
+    scale(0.666,2.0,1.0, p, &p);
+    float dtc4 = sqrt(pow((p - c4), 2).sum());
+    scale(1.5,0.5,1.0,p,&p);
+    float dtc5 = sqrt(pow((p - c5), 2).sum());
+
     float d1 = dtc1 - radius;
-    float d2 = dtc2 - 0.5;
-    float d3 = dtc3 - 0.5;
-    *d = d3;
-    *d = min(d1, d3);
-    *d = min(min(d1, d2), d3);
+    float d2 = dtc2 - 2;
+    float d3 = dtc3 - 2;
+    float d4 = dtc4 - 2;
+    float d5 = dtc5 - 2;
+    *d = min(min(min(min(d1, d2), d3), d4), d5);
     */
+    //cout << *d<< endl;
+
     // THIS IS MULTIPLE SPHERES
     /*
     valarray<float> c2 = { -2.0, -2.0, 20.0};
@@ -436,16 +470,12 @@ void Func_Sphere::dist(valarray<float> p, float*d) {
     */
 
     // THIS IS A LINEAR TRANSLATION
-
+    /*
     valarray<float> obj_point = {0,0,0};
-    //exp_rotate(0, 0, 0, obj_point, &obj_point);
-    //rotate(0.0,0.0,1.0, PI/6, obj_point, &obj_point);
-    //scale(2, 3, 1, p, &obj_point);
-    translate(0,0,20,p,&obj_point);
     float dist_to_center = sqrt(pow((obj_point), 2).sum());
     float plane = 3.0 - obj_point[0];
     *d = min(dist_to_center - radius, plane);
-
+    */
     // THIS IS A SUPERQUADRIC
     /*
     float r = 0.5;
@@ -457,8 +487,102 @@ void Func_Sphere::dist(valarray<float> p, float*d) {
     translate(0,0,10,obj_point,&obj_point);
     *d = (-1) *(1.0 - pow(abs(obj_point[0]),r) - pow(abs(obj_point[1]), s)- pow(abs(obj_point[2]), t));
     */
+    // rainbow ball on surface -- 1
+    if (mode == 1) {
+        float dist_to_center = (sqrt(pow((p - center), 2).sum()) - radius);
+        float plane = 10.0 - p[2];
+        *d = min(dist_to_center, plane);
+    }
+    // rainbow box -- 2 and 3
+    if (mode == 2 || mode == 3) {
+        float dist_to_center = (sqrt(pow((p - center), 2).sum()) - radius);
+        float plane = 2.0 - p[1];
+        float plane2 = 2.0 - p[0];
+        float plane3 = 2.0 + p[0];
+        float plane4 = 2.0 + p[1];
+        float plane5 = 8.0 - p[2];
+        float plane6 = 2.0 + p[2];
+        *d = min(min(min(min(min(min(plane6, plane5), plane4), plane3), plane2), plane),  dist_to_center);
+    }  
+    // reflective spheres -- 4 
+    if (mode == 4) {
+        
+        valarray<float> c2 = {-6.0, 0.0, 15.0};
+        valarray<float> c3 = {0.0, 6.0, 15.0};
+        valarray<float> c4 = {6.0, 0.0, 15.0};
+        valarray<float> c5 = {0.0, -6.0, 15.0};
+        float dtc1 = sqrt(pow((p - center), 2).sum());
+        float dtc2 = sqrt(pow((p - c2), 2).sum());
+        float dtc3 = sqrt(pow((p - c3), 2).sum());
+        float dtc4 = sqrt(pow((p - c4), 2).sum());
+        float dtc5 = sqrt(pow((p - c5), 2).sum());
 
+        float d1 = dtc1 - radius;
+        float d2 = dtc2 - 2;
+        float d3 = dtc3 - 2;
+        float d4 = dtc4 - 2;
+        float d5 = dtc5 - 2;
+        *d = min(min(min(min(d1, d2), d3), d4), d5);
 
+    }
+    // reflective ellipses -- 5 
+    if (mode == 5) {  
+        valarray<float> c2 = {-6.0, 0.0, 15.0};
+        valarray<float> c3 = {0.0, 6.0, 15.0};
+        valarray<float> c4 = {6.0, 0.0, 15.0};
+        valarray<float> c5 = {0.0, -6.0, 15.0};
+        float dtc1 = sqrt(pow((p - center), 2).sum());
+        scale(1.0,2.0,1.0, p, &p);
+        float dtc2 = sqrt(pow((p - c2), 2).sum());
+        scale(1.5,0.5,1.0,p,&p);
+        float dtc3 = sqrt(pow((p - c3), 2).sum());
+        scale(0.666,2.0,1.0, p, &p);
+        float dtc4 = sqrt(pow((p - c4), 2).sum());
+        scale(1.5,0.5,1.0,p,&p);
+        float dtc5 = sqrt(pow((p - c5), 2).sum());
+
+        float d1 = dtc1 - radius;
+        float d2 = dtc2 - 2;
+        float d3 = dtc3 - 2;
+        float d4 = dtc4 - 2;
+        float d5 = dtc5 - 2;
+        *d = min(min(min(min(d1, d2), d3), d4), d5);
+
+    }
+
+    // x and y blue balls -- 6
+    if (mode == 6) {    
+        p[0] = 2.0 * ((p[0]/2.0) - floor((p[0]/2.0) + (1.0/2.0)));
+        p[1] = 2.0 * ((p[1]/2.0) - floor((p[1]/2.0) + (1.0/2.0)));
+
+        float dist_to_center = (sqrt(pow((p - center), 2).sum()) - radius);
+        *d = dist_to_center;
+    }
+
+    // x and y yellow balls -- 7
+    if (mode == 7) {    
+        p[0] = 2.0 * ((p[0]/2.0) - floor((p[0]/2.0) + (1.0/2.0)));
+        p[1] = 2.0 * ((p[1]/2.0) - floor((p[1]/2.0) + (1.0/2.0)));
+
+        float dist_to_center = (sqrt(pow((p - center), 2).sum()) - radius);
+        *d = dist_to_center;
+    }
+
+    //YELLOW BALLS 
+    //TWO BALLS ONE BOX -- 8
+    if(mode == 8) { 
+        float dist_to_center = (sqrt(pow((p - center), 2).sum()) - radius);
+        valarray<float> c2 = {2.0, 2.0, 7.0};
+        float dtc2 = (sqrt(pow((p - c2), 2).sum()) - 3.0);
+        float plane = 5.0 - p[1];
+        float plane2 = 7.0 - p[0];
+        float plane3 = 7.0 + p[0];
+        float plane4 = 5.0 + p[1];
+        float plane5 = 11.0 - p[2];
+        float plane6 = 2.0 + p[2];
+        *d = min(min(min(min(min(min(min(plane6, plane5), plane4), plane3), plane2), plane),  dist_to_center), dtc2);
+    }
+    
 }
 
 bool Func_Sphere::t_hit(Ray ray, float* t) {
@@ -472,6 +596,11 @@ bool Func_Sphere::t_hit(Ray ray, float* t) {
         dist(cur_pt, &d);
         if (d < epsilon) {
             *t = cur_t;
+            if (false) {
+            cout << "Ray: " << ray.direction[0] <<"," << ray.direction[1] << "," << ray.direction[2] << endl;
+            cout << "T FOUND: " << *t << endl;
+            cout << "D found: " << d << endl;
+            }
             return true;
         }
         cur_t = cur_t + d;
@@ -710,7 +839,7 @@ class Camera {
 
 Camera::Camera(void) {
     eye_pos.resize(3);
-    eye_pos = {0,0,0};
+    eye_pos = {0,0,-1.5};
 }
 
 /*
